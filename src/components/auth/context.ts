@@ -8,7 +8,6 @@ interface AuthContextValue {
   signIn: (email: string, password: string) => Promise<{ error: Error | null }>;
   signUp: (email: string, password: string) => Promise<{ error: Error | null }>;
   signOut: () => Promise<void>;
-  sendMagicLink: (email: string) => Promise<{ error: Error | null }>;
 }
 
 export const AuthContext = createContext<AuthContextValue | undefined>(
