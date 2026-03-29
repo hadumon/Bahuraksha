@@ -51,6 +51,7 @@ The app now supports Supabase-backed operational tables for:
 - `rainfall_forecasts`
 - `data_sources`
 - `satellite_products`
+- `profiles`
 
 Apply the new SQL migration in `supabase/migrations` to your Supabase project before expecting live data in the UI.
 
