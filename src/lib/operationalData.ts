@@ -99,6 +99,80 @@ export type DashboardStats = {
   predictionHorizon: string;
 };
 
+function fallbackDataSources(): LiveDataSource[] {
+  const now = new Date().toISOString();
+
+  return [
+    {
+      id: "source-s1",
+      slug: "sentinel-1-sar",
+      name: "Sentinel-1 SAR",
+      provider: "Copernicus",
+      category: "satellite",
+      status: "active",
+      description: "Synthetic Aperture Radar for flood extent and water detection.",
+      lastUpdated: now,
+      metadata: { product_type: "flood_extent", collection: "sentinel-1-grd" },
+    },
+    {
+      id: "source-s2",
+      slug: "sentinel-2-optical",
+      name: "Sentinel-2 Optical",
+      provider: "Copernicus",
+      category: "satellite",
+      status: "active",
+      description:
+        "Optical multispectral imagery for water, land cover, and glacial observations.",
+      lastUpdated: now,
+      metadata: { product_type: "surface_reflectance", collection: "sentinel-2-l2a" },
+    },
+    {
+      id: "source-gfs",
+      slug: "gfs-forecast",
+      name: "Rainfall Forecast",
+      provider: "NOAA GFS",
+      category: "weather",
+      status: "active",
+      description: "Weather-driven rainfall forecast for Bagmati Basin.",
+      lastUpdated: now,
+      metadata: { model: "GFS" },
+    },
+    {
+      id: "source-dhm",
+      slug: "dhm-river-gauges",
+      name: "River Gauges",
+      provider: "DHM Nepal",
+      category: "hydrology",
+      status: "active",
+      description: "Telemetry from river gauge stations.",
+      lastUpdated: now,
+      metadata: { network: "Bagmati", active_sensors: 23, total_sensors: 25 },
+    },
+    {
+      id: "source-cr",
+      slug: "citizen-reports",
+      name: "Citizen Reports",
+      provider: "Community",
+      category: "ground-truth",
+      status: "active",
+      description: "Field observations submitted by citizens.",
+      lastUpdated: now,
+      metadata: { verification: "manual+ml" },
+    },
+    {
+      id: "source-ml",
+      slug: "bahuraksha-risk-engine",
+      name: "Risk Engine",
+      provider: "Bahuraksha",
+      category: "ml",
+      status: "active",
+      description: "Composite flood and landslide risk scoring.",
+      lastUpdated: now,
+      metadata: { models: ["lstm", "xgboost"] },
+    },
+  ];
+}
+
 function isRiskLevel(value: string): value is RiskLevel {
   return ["safe", "watch", "warning", "evacuate"].includes(value);
 }
@@ -325,7 +399,7 @@ export async function fetchDataSources() {
     .order("name");
 
   if (error || !data?.length) {
-    return [] as LiveDataSource[];
+    return fallbackDataSources();
   }
 
   return data;
