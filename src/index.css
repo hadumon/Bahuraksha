@@ -1,0 +1,156 @@
+@import url("https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;600;700&display=swap");
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --background: 220 20% 7%;
+    --foreground: 210 20% 92%;
+
+    --card: 220 18% 10%;
+    --card-foreground: 210 20% 92%;
+
+    --popover: 220 18% 10%;
+    --popover-foreground: 210 20% 92%;
+
+    --primary: 199 89% 48%;
+    --primary-foreground: 220 20% 7%;
+
+    --secondary: 220 16% 16%;
+    --secondary-foreground: 210 20% 85%;
+
+    --muted: 220 14% 14%;
+    --muted-foreground: 215 12% 50%;
+
+    --accent: 199 70% 30%;
+    --accent-foreground: 199 89% 90%;
+
+    --destructive: 0 72% 51%;
+    --destructive-foreground: 0 0% 100%;
+
+    --border: 220 14% 18%;
+    --input: 220 14% 18%;
+    --ring: 199 89% 48%;
+
+    --radius: 0.5rem;
+
+    /* BAHURAKSHA custom tokens */
+    --risk-safe: 142 71% 45%;
+    --risk-watch: 45 93% 47%;
+    --risk-warning: 25 95% 53%;
+    --risk-evacuate: 0 72% 51%;
+
+    --gradient-primary: linear-gradient(
+      135deg,
+      hsl(199, 89%, 48%),
+      hsl(220, 70%, 50%)
+    );
+    --gradient-danger: linear-gradient(
+      135deg,
+      hsl(0, 72%, 51%),
+      hsl(25, 95%, 53%)
+    );
+    --gradient-safe: linear-gradient(
+      135deg,
+      hsl(142, 71%, 45%),
+      hsl(170, 60%, 40%)
+    );
+    --gradient-card: linear-gradient(
+      180deg,
+      hsl(220, 18%, 12%),
+      hsl(220, 18%, 9%)
+    );
+
+    --shadow-glow-primary: 0 0 20px hsl(199 89% 48% / 0.15);
+    --shadow-glow-danger: 0 0 20px hsl(0 72% 51% / 0.15);
+    --shadow-card: 0 4px 24px hsl(0 0% 0% / 0.3);
+
+    --sidebar-background: 220 20% 6%;
+    --sidebar-foreground: 210 20% 80%;
+    --sidebar-primary: 199 89% 48%;
+    --sidebar-primary-foreground: 220 20% 7%;
+    --sidebar-accent: 220 16% 12%;
+    --sidebar-accent-foreground: 210 20% 90%;
+    --sidebar-border: 220 14% 14%;
+    --sidebar-ring: 199 89% 48%;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+
+  body {
+    @apply bg-background text-foreground font-sans antialiased;
+    font-family: "Inter", system-ui, sans-serif;
+  }
+
+  /* Custom scrollbar */
+  ::-webkit-scrollbar {
+    width: 6px;
+  }
+  ::-webkit-scrollbar-track {
+    background: hsl(var(--background));
+  }
+  ::-webkit-scrollbar-thumb {
+    background: hsl(var(--border));
+    border-radius: 3px;
+  }
+}
+
+@layer utilities {
+  .text-risk-safe {
+    color: hsl(var(--risk-safe));
+  }
+  .text-risk-watch {
+    color: hsl(var(--risk-watch));
+  }
+  .text-risk-warning {
+    color: hsl(var(--risk-warning));
+  }
+  .text-risk-evacuate {
+    color: hsl(var(--risk-evacuate));
+  }
+  .bg-risk-safe {
+    background-color: hsl(var(--risk-safe));
+  }
+  .bg-risk-watch {
+    background-color: hsl(var(--risk-watch));
+  }
+  .bg-risk-warning {
+    background-color: hsl(var(--risk-warning));
+  }
+  .bg-risk-evacuate {
+    background-color: hsl(var(--risk-evacuate));
+  }
+
+  .gradient-primary {
+    background: var(--gradient-primary);
+  }
+  .gradient-danger {
+    background: var(--gradient-danger);
+  }
+  .gradient-safe {
+    background: var(--gradient-safe);
+  }
+  .gradient-card {
+    background: var(--gradient-card);
+  }
+  .shadow-glow-primary {
+    box-shadow: var(--shadow-glow-primary);
+  }
+  .shadow-glow-danger {
+    box-shadow: var(--shadow-glow-danger);
+  }
+
+  .font-mono {
+    font-family: "JetBrains Mono", monospace;
+  }
+
+  .animate-pulse-slow {
+    animation: pulse 3s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+  }
+}
