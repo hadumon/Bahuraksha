@@ -1,186 +1,218 @@
+/**
+ * Bahuraksha Sentinel Data Ingestion Script
+ * Source: Microsoft Planetary Computer STAC API
+ * Collections: sentinel-1-rtc (SAR), sentinel-2-l2a (optical/glacial)
+ * Target: Supabase
+ */
+
 import { createClient } from "@supabase/supabase-js";
 
-const requiredEnv = ["SUPABASE_URL", "SUPABASE_SERVICE_ROLE_KEY", "SATELLITE_STAC_API"];
-const missing = requiredEnv.filter((name) => !process.env[name]);
+const STAC_BASE = "https://planetarycomputer.microsoft.com/api/stac/v1/search";
 
-if (missing.length) {
-  console.error(`Missing required env vars: ${missing.join(", ")}`);
+// Bahuraksha / Rolwaling Himal bounding box [west, south, east, north]
+const BBOX = [86.0, 27.7, 86.6, 28.1];
+
+const COLLECTIONS = [
+  {
+    id: "sentinel-1-rtc",
+    label: "Sentinel-1 RTC",
+    use: "flood_sar",
+    extraFilter: null,
+  },
+  {
+    id: "sentinel-2-l2a",
+    label: "Sentinel-2 L2A",
+    use: "optical_glacial",
+    extraFilter: { "eo:cloud_cover": { lte: 30 } },
+  },
+];
+
+const DEFAULT_LOOKBACK_DAYS = 30;
+const PAGE_LIMIT = 50;
+
+const SUPABASE_URL = process.env.SUPABASE_URL;
+const SUPABASE_SERVICE_KEY = process.env.SUPABASE_SERVICE_KEY;
+
+if (!SUPABASE_URL || !SUPABASE_SERVICE_KEY) {
+  console.error(
+    "ERROR: Set SUPABASE_URL and SUPABASE_SERVICE_KEY environment variables.",
+  );
   process.exit(1);
 }
 
-const config = {
-  supabaseUrl: process.env.SUPABASE_URL,
-  supabaseServiceRoleKey: process.env.SUPABASE_SERVICE_ROLE_KEY,
-  stacApi: process.env.SATELLITE_STAC_API,
-  collection: process.env.SATELLITE_COLLECTION ?? "sentinel-1-grd",
-  sourceSlug: process.env.SATELLITE_SOURCE_SLUG ?? "sentinel-1-sar",
-  productType: process.env.SATELLITE_PRODUCT_TYPE ?? "flood_extent",
-  regionName: process.env.SATELLITE_REGION ?? "Bagmati Basin",
-  provider: process.env.SATELLITE_PROVIDER ?? "Copernicus",
-  sourceName: process.env.SATELLITE_SOURCE_NAME ?? "Sentinel ingestion",
-  sourceDescription:
-    process.env.SATELLITE_SOURCE_DESCRIPTION ??
-    "Satellite products ingested from a STAC-compatible endpoint.",
-  category: process.env.SATELLITE_CATEGORY ?? "satellite",
-  bbox: (process.env.SATELLITE_BBOX ?? "85.20,27.60,85.45,27.82")
-    .split(",")
-    .map(Number),
-  datetime: process.env.SATELLITE_DATETIME ?? "2026-01-01T00:00:00Z/..",
-  limit: Number(process.env.SATELLITE_LIMIT ?? "3"),
-  riskLevel: process.env.SATELLITE_RISK_LEVEL ?? null,
-  floodAreaKm2: process.env.SATELLITE_FLOOD_AREA_KM2
-    ? Number(process.env.SATELLITE_FLOOD_AREA_KM2)
-    : null,
-  cloudCover: process.env.SATELLITE_CLOUD_COVER
-    ? Number(process.env.SATELLITE_CLOUD_COVER)
-    : null,
-  resolutionMeters: process.env.SATELLITE_RESOLUTION_METERS
-    ? Number(process.env.SATELLITE_RESOLUTION_METERS)
-    : 10,
-};
-
-if (config.bbox.length !== 4 || config.bbox.some(Number.isNaN)) {
-  console.error("SATELLITE_BBOX must be four comma-separated numbers: minLng,minLat,maxLng,maxLat");
-  process.exit(1);
-}
-
-const supabase = createClient(config.supabaseUrl, config.supabaseServiceRoleKey, {
+const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_KEY, {
   auth: { persistSession: false },
 });
 
-async function searchStac() {
-  const response = await fetch(config.stacApi, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      collections: [config.collection],
-      bbox: config.bbox,
-      datetime: config.datetime,
-      limit: config.limit,
+function daysAgo(n) {
+  const d = new Date();
+  d.setDate(d.getDate() - n);
+  return d.toISOString();
+}
+
+async function getLastIngestedAt(collectionId) {
+  const { data, error } = await supabase
+    .from("sentinel_scenes")
+    .select("scene_datetime")
+    .eq("collection", collectionId)
+    .order("scene_datetime", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+
+  if (error || !data) {
+    console.log(
+      `[${collectionId}] No previous ingestion found — using ${DEFAULT_LOOKBACK_DAYS}d lookback.`,
+    );
+    return daysAgo(DEFAULT_LOOKBACK_DAYS);
+  }
+
+  return data.scene_datetime;
+}
+
+async function fetchSTACItems(collection, dateFrom) {
+  const items = [];
+  let token = null;
+
+  console.log(`\n[${collection.id}] Searching from ${dateFrom} ...`);
+
+  while (true) {
+    const body = {
+      collections: [collection.id],
+      bbox: BBOX,
+      datetime: `${dateFrom}/..`,
+      limit: PAGE_LIMIT,
       sortby: [{ field: "properties.datetime", direction: "desc" }],
-    }),
-  });
+    };
 
-  if (!response.ok) {
-    const body = await response.text();
-    throw new Error(`STAC search failed (${response.status}): ${body}`);
+    if (collection.extraFilter) {
+      body.query = collection.extraFilter;
+    }
+
+    if (token) {
+      body.token = token;
+    }
+
+    const res = await fetch(STAC_BASE, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(body),
+    });
+
+    if (!res.ok) {
+      const text = await res.text();
+      throw new Error(`STAC API error ${res.status}: ${text}`);
+    }
+
+    const json = await res.json();
+    const features = json.features || [];
+
+    console.log(
+      `[${collection.id}] Page returned ${features.length} items (total matched: ${json.context?.matched ?? "?"})`,
+    );
+
+    items.push(...features);
+
+    const nextLink = json.links?.find((l) => l.rel === "next");
+    if (!nextLink || features.length < PAGE_LIMIT) {
+      break;
+    }
+
+    const nextUrl = new URL(nextLink.href);
+    token = nextUrl.searchParams.get("token");
+    if (!token) {
+      break;
+    }
   }
 
-  const payload = await response.json();
-  return Array.isArray(payload.features) ? payload.features : [];
+  return items;
 }
 
-function toFeatureGeometry(feature) {
-  if (!feature?.geometry) {
-    return null;
-  }
+function mapItemToRow(item, collection) {
+  const props = item.properties || {};
+  const bbox = item.bbox || BBOX;
 
   return {
-    type: "Feature",
-    properties: {
-      stac_id: feature.id,
-      collection: feature.collection,
-    },
-    geometry: feature.geometry,
+    scene_id: item.id,
+    collection: collection.id,
+    use_case: collection.use,
+    scene_datetime: props.datetime,
+    cloud_cover: props["eo:cloud_cover"] ?? null,
+    platform: props.platform ?? null,
+    instrument_mode: props["sar:instrument_mode"] ?? null,
+    polarizations: props["sar:polarizations"]
+      ? JSON.stringify(props["sar:polarizations"])
+      : null,
+    orbit_state: props["sat:orbit_state"] ?? null,
+    mgrs_tile: props["s2:mgrs_tile"] ?? null,
+    processing_baseline: props["s2:processing_baseline"] ?? null,
+    bbox_west: bbox[0],
+    bbox_south: bbox[1],
+    bbox_east: bbox[2],
+    bbox_north: bbox[3],
+    geometry: item.geometry ? JSON.stringify(item.geometry) : null,
+    assets_json: item.assets ? JSON.stringify(item.assets) : null,
+    stac_item_url:
+      item.links?.find((l) => l.rel === "self")?.href ?? null,
+    ingested_at: new Date().toISOString(),
   };
 }
 
-function toSatelliteProductRow(feature, index) {
-  const observedAt =
-    feature?.properties?.datetime ??
-    feature?.properties?.start_datetime ??
-    new Date().toISOString();
+async function upsertScenes(rows) {
+  if (rows.length === 0) {
+    return { count: 0, errors: [] };
+  }
 
-  return {
-    source_slug: config.sourceSlug,
-    product_type: config.productType,
-    region_name: config.regionName,
-    observed_at: observedAt,
-    risk_level: config.riskLevel,
-    flood_area_km2: config.floodAreaKm2,
-    cloud_cover:
-      typeof feature?.properties?.["eo:cloud_cover"] === "number"
-        ? feature.properties["eo:cloud_cover"]
-        : config.cloudCover,
-    resolution_meters: config.resolutionMeters,
-    footprint_geojson: toFeatureGeometry(feature),
-    metadata: {
-      ingestion_rank: index,
-      stac_id: feature.id,
-      collection: feature.collection,
-      assets: Object.keys(feature.assets ?? {}),
-      properties: feature.properties ?? {},
-      links: feature.links ?? [],
-    },
-    product_url:
-      feature?.assets?.visual?.href ??
-      feature?.assets?.rendered_preview?.href ??
-      feature?.assets?.thumbnail?.href ??
-      null,
-    thumbnail_url: feature?.assets?.thumbnail?.href ?? null,
-    is_latest: index === 0,
-  };
+  const { error } = await supabase
+    .from("sentinel_scenes")
+    .upsert(rows, { onConflict: "scene_id", ignoreDuplicates: false });
+
+  if (error) {
+    console.error("Supabase upsert error:", error);
+    return { count: 0, errors: [error] };
+  }
+
+  return { count: rows.length, errors: [] };
 }
 
 async function main() {
-  console.log(`Searching ${config.collection} from ${config.stacApi} for ${config.regionName}...`);
-  const features = await searchStac();
+  console.log("=== Bahuraksha Sentinel Ingestion ===");
+  console.log(`BBOX: [${BBOX.join(", ")}]`);
+  console.log(`STAC endpoint: ${STAC_BASE}\n`);
 
-  if (!features.length) {
-    console.log("No satellite features found for the requested parameters.");
-    return;
+  const summary = [];
+
+  for (const collection of COLLECTIONS) {
+    try {
+      const dateFrom = await getLastIngestedAt(collection.id);
+      const items = await fetchSTACItems(collection, dateFrom);
+
+      if (items.length === 0) {
+        console.log(`[${collection.id}] No new scenes found.`);
+        summary.push({ collection: collection.id, fetched: 0, upserted: 0 });
+        continue;
+      }
+
+      const rows = items.map((item) => mapItemToRow(item, collection));
+      const { count, errors } = await upsertScenes(rows);
+
+      console.log(
+        `[${collection.id}] \u2713 Upserted ${count} scenes into sentinel_scenes`,
+      );
+
+      summary.push({
+        collection: collection.id,
+        fetched: items.length,
+        upserted: count,
+        errors: errors.length,
+      });
+    } catch (err) {
+      console.error(`[${collection.id}] Fatal error:`, err.message);
+      summary.push({ collection: collection.id, error: err.message });
+    }
   }
 
-  const latestObservedAt =
-    features[0]?.properties?.datetime ??
-    features[0]?.properties?.start_datetime ??
-    new Date().toISOString();
-
-  const { error: sourceError } = await supabase.from("data_sources").upsert(
-    {
-      slug: config.sourceSlug,
-      name: config.sourceName,
-      provider: config.provider,
-      category: config.category,
-      status: "active",
-      description: config.sourceDescription,
-      last_updated: latestObservedAt,
-      metadata: {
-        collection: config.collection,
-        stac_api: config.stacApi,
-        region: config.regionName,
-      },
-    },
-    { onConflict: "slug" },
-  );
-
-  if (sourceError) {
-    throw sourceError;
-  }
-
-  const { error: resetError } = await supabase
-    .from("satellite_products")
-    .update({ is_latest: false })
-    .eq("source_slug", config.sourceSlug)
-    .eq("product_type", config.productType)
-    .eq("region_name", config.regionName);
-
-  if (resetError) {
-    throw resetError;
-  }
-
-  const rows = features.map(toSatelliteProductRow);
-  const { error: insertError } = await supabase.from("satellite_products").insert(rows);
-
-  if (insertError) {
-    throw insertError;
-  }
-
-  console.log(`Inserted ${rows.length} satellite product(s) into Supabase.`);
-  console.log(`Latest observation: ${rows[0].observed_at}`);
+  console.log("\n=== Run Summary ===");
+  console.table(summary);
 }
 
-main().catch((error) => {
-  console.error(error);
-  process.exit(1);
-});
+main();

@@ -90,6 +90,22 @@ export type LiveDataSource = {
   metadata: Json;
 };
 
+export type LiveSentinelScene = {
+  id: string;
+  sceneId: string;
+  collection: string;
+  useCase: string;
+  sceneDatetime: string;
+  cloudCover: number | null;
+  platform: string | null;
+  instrumentMode: string | null;
+  orbitState: string | null;
+  mgrsTile: string | null;
+  processingBaseline: string | null;
+  stacItemUrl: string | null;
+  ingestedAt: string;
+};
+
 export type DashboardStats = {
   activeAlerts: number;
   totalStations: number;
@@ -403,6 +419,34 @@ export async function fetchDataSources() {
   }
 
   return data;
+}
+
+export async function fetchLatestSentinelScenes(limit = 12) {
+  const { data, error } = await supabase
+    .from("sentinel_scenes")
+    .select("*")
+    .order("scene_datetime", { ascending: false })
+    .limit(limit);
+
+  if (error || !data?.length) {
+    return [] as LiveSentinelScene[];
+  }
+
+  return data.map((scene) => ({
+    id: scene.id,
+    sceneId: scene.scene_id,
+    collection: scene.collection,
+    useCase: scene.use_case,
+    sceneDatetime: scene.scene_datetime,
+    cloudCover: scene.cloud_cover,
+    platform: scene.platform,
+    instrumentMode: scene.instrument_mode,
+    orbitState: scene.orbit_state,
+    mgrsTile: scene.mgrs_tile,
+    processingBaseline: scene.processing_baseline,
+    stacItemUrl: scene.stac_item_url,
+    ingestedAt: scene.ingested_at,
+  }));
 }
 
 export async function fetchDashboardStats(): Promise<DashboardStats> {

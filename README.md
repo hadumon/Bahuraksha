@@ -61,23 +61,13 @@ Use the ingestion scaffold to pull STAC-compatible satellite metadata into Supab
 
 ```bash
 $env:SUPABASE_URL="https://your-project.supabase.co"
-$env:SUPABASE_SERVICE_ROLE_KEY="your-service-role-key"
-$env:SATELLITE_STAC_API="https://your-stac-api/search"
-$env:SATELLITE_COLLECTION="sentinel-1-grd"
-$env:SATELLITE_SOURCE_SLUG="sentinel-1-sar"
-$env:SATELLITE_PRODUCT_TYPE="flood_extent"
-$env:SATELLITE_REGION="Bagmati Basin"
-$env:SATELLITE_BBOX="85.20,27.60,85.45,27.82"
+$env:SUPABASE_SERVICE_KEY="your-service-role-key"
 npm run ingest:satellite
 ```
 
-Optional env vars:
+This script uses the Microsoft Planetary Computer STAC API and ingests:
 
-- `SATELLITE_DATETIME`
-- `SATELLITE_LIMIT`
-- `SATELLITE_RISK_LEVEL`
-- `SATELLITE_FLOOD_AREA_KM2`
-- `SATELLITE_CLOUD_COVER`
-- `SATELLITE_RESOLUTION_METERS`
-- `SATELLITE_SOURCE_NAME`
-- `SATELLITE_SOURCE_DESCRIPTION`
+- `sentinel-1-rtc`
+- `sentinel-2-l2a`
+
+It writes rows into `public.sentinel_scenes`.

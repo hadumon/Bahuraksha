@@ -418,6 +418,75 @@ export type Database = {
         }
         Relationships: []
       }
+      sentinel_scenes: {
+        Row: {
+          assets_json: Json | null
+          bbox_east: number
+          bbox_north: number
+          bbox_south: number
+          bbox_west: number
+          cloud_cover: number | null
+          collection: string
+          geometry: Json | null
+          id: string
+          ingested_at: string
+          instrument_mode: string | null
+          mgrs_tile: string | null
+          orbit_state: string | null
+          platform: string | null
+          polarizations: Json | null
+          processing_baseline: string | null
+          scene_datetime: string
+          scene_id: string
+          stac_item_url: string | null
+          use_case: string
+        }
+        Insert: {
+          assets_json?: Json | null
+          bbox_east: number
+          bbox_north: number
+          bbox_south: number
+          bbox_west: number
+          cloud_cover?: number | null
+          collection: string
+          geometry?: Json | null
+          id?: string
+          ingested_at?: string
+          instrument_mode?: string | null
+          mgrs_tile?: string | null
+          orbit_state?: string | null
+          platform?: string | null
+          polarizations?: Json | null
+          processing_baseline?: string | null
+          scene_datetime: string
+          scene_id: string
+          stac_item_url?: string | null
+          use_case: string
+        }
+        Update: {
+          assets_json?: Json | null
+          bbox_east?: number
+          bbox_north?: number
+          bbox_south?: number
+          bbox_west?: number
+          cloud_cover?: number | null
+          collection?: string
+          geometry?: Json | null
+          id?: string
+          ingested_at?: string
+          instrument_mode?: string | null
+          mgrs_tile?: string | null
+          orbit_state?: string | null
+          platform?: string | null
+          polarizations?: Json | null
+          processing_baseline?: string | null
+          scene_datetime?: string
+          scene_id?: string
+          stac_item_url?: string | null
+          use_case?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
