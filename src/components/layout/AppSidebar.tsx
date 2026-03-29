@@ -31,6 +31,24 @@ interface Props {
   onClose: () => void;
 }
 
+function BrandLink({ onClick }: { onClick?: () => void }) {
+  return (
+    <Link to="/" onClick={onClick} className="flex items-center gap-3 min-w-0">
+      <div className="w-9 h-9 rounded-lg gradient-primary flex items-center justify-center flex-shrink-0">
+        <Shield className="w-5 h-5 text-primary-foreground" />
+      </div>
+      <div className="overflow-hidden">
+        <h1 className="text-sm font-bold text-foreground tracking-wide">
+          BAHURAKSHA
+        </h1>
+        <p className="text-[10px] text-muted-foreground">
+          Bahuraksha | Flood Intelligence
+        </p>
+      </div>
+    </Link>
+  );
+}
+
 export default function AppSidebar({ isMobile, mobileOpen, onClose }: Props) {
   const location = useLocation();
   const { user, signOut } = useAuth();
@@ -52,20 +70,8 @@ export default function AppSidebar({ isMobile, mobileOpen, onClose }: Props) {
             transition={{ duration: 0.2 }}
             className="fixed left-0 top-0 h-screen w-[280px] bg-sidebar border-r border-sidebar-border z-50 flex flex-col"
           >
-            <div className="flex items-center justify-between px-4 h-14 border-b border-sidebar-border">
-              <div className="flex items-center gap-3">
-                <div className="w-9 h-9 rounded-lg gradient-primary flex items-center justify-center">
-                  <Shield className="w-5 h-5 text-primary-foreground" />
-                </div>
-                <div>
-                  <h1 className="text-sm font-bold text-foreground tracking-wide">
-                    BAHURAKSHA
-                  </h1>
-                  <p className="text-[10px] text-muted-foreground">
-                    बहुरक्षा • Flood Intelligence
-                  </p>
-                </div>
-              </div>
+            <div className="flex items-center justify-between px-4 h-14 border-b border-sidebar-border gap-3">
+              <BrandLink onClick={onClose} />
               <button
                 onClick={onClose}
                 className="text-muted-foreground hover:text-foreground"
@@ -105,18 +111,8 @@ export default function AppSidebar({ isMobile, mobileOpen, onClose }: Props) {
 
   return (
     <aside className="fixed left-0 top-0 h-screen w-[240px] bg-sidebar border-r border-sidebar-border z-50 flex flex-col">
-      <div className="flex items-center gap-3 px-4 h-16 border-b border-sidebar-border">
-        <div className="w-9 h-9 rounded-lg gradient-primary flex items-center justify-center flex-shrink-0">
-          <Shield className="w-5 h-5 text-primary-foreground" />
-        </div>
-        <div className="overflow-hidden">
-          <h1 className="text-sm font-bold text-foreground tracking-wide">
-            BAHURAKSHA
-          </h1>
-          <p className="text-[10px] text-muted-foreground">
-            बहुरक्षा • Flood Intelligence
-          </p>
-        </div>
+      <div className="px-4 h-16 border-b border-sidebar-border flex items-center">
+        <BrandLink />
       </div>
       <NavList location={location} />
 
@@ -160,12 +156,11 @@ function NavList({
             key={item.path}
             to={item.path}
             onClick={onNavigate}
-            className={`flex items-center gap-3 px-3 py-2.5 rounded-lg transition-all text-sm
-              ${
-                isActive
-                  ? "bg-primary/10 text-primary shadow-glow-primary"
-                  : "text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
-              }`}
+            className={`flex items-center gap-3 px-3 py-2.5 rounded-lg transition-all text-sm ${
+              isActive
+                ? "bg-primary/10 text-primary shadow-glow-primary"
+                : "text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
+            }`}
           >
             <item.icon
               className={`w-5 h-5 flex-shrink-0 ${isActive ? "text-primary" : ""}`}
