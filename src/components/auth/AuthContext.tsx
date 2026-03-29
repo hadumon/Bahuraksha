@@ -4,6 +4,16 @@ import { supabase } from "@/integrations/supabase/client";
 import type { User, Session } from "@supabase/supabase-js";
 import { AuthContext } from "./context";
 
+function getAuthRedirectUrl() {
+  const configuredUrl = import.meta.env.VITE_AUTH_REDIRECT_URL?.trim();
+
+  if (configuredUrl) {
+    return configuredUrl.replace(/\/+$/, "");
+  }
+
+  return window.location.origin;
+}
+
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [session, setSession] = useState<Session | null>(null);
@@ -69,7 +79,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const { error } = await supabase.auth.signInWithOtp({
       email,
       options: {
-        emailRedirectTo: `${window.location.origin}`,
+        emailRedirectTo: getAuthRedirectUrl(),
       },
     });
     return { error };

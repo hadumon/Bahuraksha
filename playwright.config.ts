@@ -18,8 +18,8 @@ export default defineConfig({
     },
   ],
   webServer: {
-    command: "npm run dev",
+    command: "npm run dev -- --mode test",
     url: "http://localhost:8080",
-    reuseExistingServer: !process.env.CI,
+    reuseExistingServer: false,
   },
 });

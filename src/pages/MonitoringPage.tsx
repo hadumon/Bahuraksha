@@ -1,13 +1,19 @@
-import AppLayout from '@/components/layout/AppLayout';
-import RiskLevelBadge from '@/components/dashboard/RiskLevelBadge';
-import RiverLevelChart from '@/components/dashboard/RiverLevelChart';
-import { riverStations } from '@/data/mockData';
-import { ArrowUp, ArrowDown, Minus } from 'lucide-react';
+import { useQuery } from "@tanstack/react-query";
+import AppLayout from "@/components/layout/AppLayout";
+import RiskLevelBadge from "@/components/dashboard/RiskLevelBadge";
+import RiverLevelChart from "@/components/dashboard/RiverLevelChart";
+import { fetchRiverStations } from "@/lib/operationalData";
+import { ArrowUp, ArrowDown, Minus } from "lucide-react";
 
 const trendIcons = { rising: ArrowUp, falling: ArrowDown, stable: Minus };
 const trendColors = { rising: 'text-risk-evacuate', falling: 'text-risk-safe', stable: 'text-muted-foreground' };
 
 export default function MonitoringPage() {
+  const { data: riverStations = [] } = useQuery({
+    queryKey: ["river-stations"],
+    queryFn: fetchRiverStations,
+  });
+
   return (
     <AppLayout>
       <div className="p-4 md:p-6 space-y-6">

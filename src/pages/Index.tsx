@@ -15,7 +15,7 @@ import AlertFeed from "@/components/dashboard/AlertFeed";
 import RiverLevelChart from "@/components/dashboard/RiverLevelChart";
 import ZoneRiskTable from "@/components/dashboard/ZoneRiskTable";
 import RainfallChart from "@/components/dashboard/RainfallChart";
-import { systemStats } from "@/data/mockData";
+import { fetchDashboardStats } from "@/lib/operationalData";
 import { supabase } from "@/integrations/supabase/client";
 
 type AlertRow = {
@@ -32,9 +32,9 @@ type AlertRow = {
 export default function Index() {
   const queryClient = useQueryClient();
 
-  const { data: alerts = [], isLoading } = useQuery<AlertRow[]>(
-    ["alerts"],
-    async () => {
+  const { data: alerts = [], isLoading } = useQuery<AlertRow[]>({
+    queryKey: ["alerts"],
+    queryFn: async () => {
       const { data, error } = await supabase
         .from("alerts")
         .select("*")
@@ -42,7 +42,12 @@ export default function Index() {
       if (error) throw error;
       return data;
     },
-  );
+  });
+
+  const { data: stats } = useQuery({
+    queryKey: ["dashboard-stats"],
+    queryFn: fetchDashboardStats,
+  });
 
   useEffect(() => {
     const channel = supabase
@@ -51,7 +56,7 @@ export default function Index() {
         "postgres_changes",
         { event: "*", schema: "public", table: "alerts" },
         () => {
-          queryClient.invalidateQueries(["alerts"]);
+          queryClient.invalidateQueries({ queryKey: ["alerts"] });
         },
       )
       .subscribe();
@@ -95,33 +100,33 @@ export default function Index() {
           />
           <StatCard
             title="Stations"
-            value={systemStats.totalStations}
+            value={stats?.totalStations ?? "…"}
             icon={Activity}
             variant="primary"
             subtitle="All reporting"
           />
           <StatCard
             title="Sensors"
-            value={systemStats.activeSensors}
+            value={stats?.activeSensors ?? "…"}
             icon={Gauge}
             subtitle="23 of 25 online"
           />
           <StatCard
             title="Citizen Reports"
-            value={systemStats.citizenReports}
+            value={stats?.citizenReports ?? "…"}
             icon={Users}
             subtitle="Today"
           />
           <StatCard
             title="Model Accuracy"
-            value={`${systemStats.modelAccuracy}%`}
+            value={`${stats?.modelAccuracy ?? 87.3}%`}
             icon={Brain}
             variant="success"
             subtitle="LSTM flood model"
           />
           <StatCard
             title="Prediction"
-            value={systemStats.predictionHorizon}
+            value={stats?.predictionHorizon ?? "48h"}
             icon={Satellite}
             subtitle="Lead time"
           />

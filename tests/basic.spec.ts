@@ -1,6 +1,9 @@
 import { test, expect, Page } from "@playwright/test";
 
-const AUTH_ENABLED = process.env.PLAYWRIGHT_DISABLE_AUTH !== "true";
+const AUTH_ENABLED =
+  process.env.PLAYWRIGHT_DISABLE_AUTH !== "true" &&
+  Boolean(process.env.PLAYWRIGHT_AUTH_EMAIL) &&
+  Boolean(process.env.PLAYWRIGHT_AUTH_PASSWORD);
 const E2E_EMAIL = process.env.PLAYWRIGHT_AUTH_EMAIL || "test+e2e@example.com";
 const E2E_PASSWORD = process.env.PLAYWRIGHT_AUTH_PASSWORD || "Password123!";
 

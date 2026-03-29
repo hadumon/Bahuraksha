@@ -1,7 +1,23 @@
-import { riverLevelHistory } from '@/data/mockData';
-import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, ReferenceLine, Area, ComposedChart } from 'recharts';
+import { useQuery } from "@tanstack/react-query";
+import {
+  LineChart,
+  Line,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  ResponsiveContainer,
+  ReferenceLine,
+  ComposedChart,
+} from "recharts";
+import { fetchRiverLevelHistory } from "@/lib/operationalData";
 
 export default function RiverLevelChart() {
+  const { data = [] } = useQuery({
+    queryKey: ["river-level-history", "Teku Station"],
+    queryFn: () => fetchRiverLevelHistory("Teku Station"),
+  });
+
   return (
     <div className="gradient-card rounded-xl border border-border p-5">
       <div className="flex items-center justify-between mb-4">
@@ -15,7 +31,7 @@ export default function RiverLevelChart() {
         </div>
       </div>
       <ResponsiveContainer width="100%" height={250}>
-        <ComposedChart data={riverLevelHistory}>
+        <ComposedChart data={data}>
           <CartesianGrid strokeDasharray="3 3" stroke="hsl(220, 14%, 18%)" />
           <XAxis dataKey="time" tick={{ fill: 'hsl(215, 12%, 50%)', fontSize: 10 }} tickLine={false} axisLine={false} interval={5} />
           <YAxis domain={[2, 7]} tick={{ fill: 'hsl(215, 12%, 50%)', fontSize: 10 }} tickLine={false} axisLine={false} />

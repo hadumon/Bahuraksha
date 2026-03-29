@@ -47,6 +47,45 @@ export type Database = {
         }
         Relationships: []
       }
+      data_sources: {
+        Row: {
+          category: string
+          created_at: string
+          description: string
+          id: string
+          last_updated: string | null
+          metadata: Json
+          name: string
+          provider: string
+          slug: string
+          status: string
+        }
+        Insert: {
+          category: string
+          created_at?: string
+          description: string
+          id?: string
+          last_updated?: string | null
+          metadata?: Json
+          name: string
+          provider: string
+          slug: string
+          status?: string
+        }
+        Update: {
+          category?: string
+          created_at?: string
+          description?: string
+          id?: string
+          last_updated?: string | null
+          metadata?: Json
+          name?: string
+          provider?: string
+          slug?: string
+          status?: string
+        }
+        Relationships: []
+      }
       citizen_reports: {
         Row: {
           created_at: string
@@ -131,6 +170,221 @@ export type Database = {
           trend?: string
           updated_at?: string
           volume?: number
+        }
+        Relationships: []
+      }
+      rainfall_forecasts: {
+        Row: {
+          basin: string
+          created_at: string
+          forecast_date: string
+          id: string
+          model: string
+          probability: number
+          rainfall_mm: number
+          source: string
+        }
+        Insert: {
+          basin: string
+          created_at?: string
+          forecast_date: string
+          id?: string
+          model: string
+          probability: number
+          rainfall_mm: number
+          source?: string
+        }
+        Update: {
+          basin?: string
+          created_at?: string
+          forecast_date?: string
+          id?: string
+          model?: string
+          probability?: number
+          rainfall_mm?: number
+          source?: string
+        }
+        Relationships: []
+      }
+      risk_zones: {
+        Row: {
+          center_lat: number
+          center_lng: number
+          district: string
+          flood_probability: number
+          id: string
+          landslide_probability: number
+          name: string
+          population: number
+          risk_level: string
+          source: string
+          updated_at: string
+        }
+        Insert: {
+          center_lat: number
+          center_lng: number
+          district: string
+          flood_probability: number
+          id?: string
+          landslide_probability: number
+          name: string
+          population?: number
+          risk_level: string
+          source?: string
+          updated_at?: string
+        }
+        Update: {
+          center_lat?: number
+          center_lng?: number
+          district?: string
+          flood_probability?: number
+          id?: string
+          landslide_probability?: number
+          name?: string
+          population?: number
+          risk_level?: string
+          source?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      river_level_observations: {
+        Row: {
+          actual_level: number | null
+          created_at: string
+          danger_level: number
+          id: string
+          observed_at: string
+          predicted_level: number | null
+          source: string
+          station_id: string
+          warning_level: number
+        }
+        Insert: {
+          actual_level?: number | null
+          created_at?: string
+          danger_level: number
+          id?: string
+          observed_at: string
+          predicted_level?: number | null
+          source?: string
+          station_id: string
+          warning_level: number
+        }
+        Update: {
+          actual_level?: number | null
+          created_at?: string
+          danger_level?: number
+          id?: string
+          observed_at?: string
+          predicted_level?: number | null
+          source?: string
+          station_id?: string
+          warning_level?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "river_level_observations_station_id_fkey"
+            columns: ["station_id"]
+            isOneToOne: false
+            referencedRelation: "river_stations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      river_stations: {
+        Row: {
+          current_level: number
+          danger_level: number
+          id: string
+          last_updated: string
+          location_lat: number
+          location_lng: number
+          name: string
+          risk_level: string
+          source: string
+          trend: string
+          warning_level: number
+        }
+        Insert: {
+          current_level: number
+          danger_level: number
+          id?: string
+          last_updated?: string
+          location_lat: number
+          location_lng: number
+          name: string
+          risk_level: string
+          source?: string
+          trend: string
+          warning_level: number
+        }
+        Update: {
+          current_level?: number
+          danger_level?: number
+          id?: string
+          last_updated?: string
+          location_lat?: number
+          location_lng?: number
+          name?: string
+          risk_level?: string
+          source?: string
+          trend?: string
+          warning_level?: number
+        }
+        Relationships: []
+      }
+      satellite_products: {
+        Row: {
+          cloud_cover: number | null
+          flood_area_km2: number | null
+          footprint_geojson: Json | null
+          id: string
+          ingested_at: string
+          is_latest: boolean
+          metadata: Json
+          observed_at: string
+          product_type: string
+          product_url: string | null
+          region_name: string
+          resolution_meters: number | null
+          risk_level: string | null
+          source_slug: string
+          thumbnail_url: string | null
+        }
+        Insert: {
+          cloud_cover?: number | null
+          flood_area_km2?: number | null
+          footprint_geojson?: Json | null
+          id?: string
+          ingested_at?: string
+          is_latest?: boolean
+          metadata?: Json
+          observed_at: string
+          product_type: string
+          product_url?: string | null
+          region_name: string
+          resolution_meters?: number | null
+          risk_level?: string | null
+          source_slug: string
+          thumbnail_url?: string | null
+        }
+        Update: {
+          cloud_cover?: number | null
+          flood_area_km2?: number | null
+          footprint_geojson?: Json | null
+          id?: string
+          ingested_at?: string
+          is_latest?: boolean
+          metadata?: Json
+          observed_at?: string
+          product_type?: string
+          product_url?: string | null
+          region_name?: string
+          resolution_meters?: number | null
+          risk_level?: string | null
+          source_slug?: string
+          thumbnail_url?: string | null
         }
         Relationships: []
       }

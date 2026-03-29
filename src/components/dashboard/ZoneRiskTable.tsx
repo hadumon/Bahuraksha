@@ -1,9 +1,15 @@
-import { zoneRisks } from '@/data/mockData';
-import RiskLevelBadge from './RiskLevelBadge';
+import { useQuery } from "@tanstack/react-query";
+import RiskLevelBadge from "./RiskLevelBadge";
+import { fetchRiskZones } from "@/lib/operationalData";
 
 export default function ZoneRiskTable() {
-  const sorted = [...zoneRisks].sort((a, b) => {
-    const order = { evacuate: 0, warning: 1, watch: 2, safe: 3 };
+  const { data: zones = [] } = useQuery({
+    queryKey: ["risk-zones"],
+    queryFn: fetchRiskZones,
+  });
+
+  const sorted = [...zones].sort((a, b) => {
+    const order = { evacuate: 0, warning: 1, watch: 2, safe: 3 } as const;
     return order[a.riskLevel] - order[b.riskLevel];
   });
 
@@ -22,7 +28,7 @@ export default function ZoneRiskTable() {
             </tr>
           </thead>
           <tbody>
-            {sorted.map(zone => (
+            {sorted.map((zone) => (
               <tr key={zone.id} className="border-b border-border/50 hover:bg-secondary/30 transition-colors">
                 <td className="py-2.5 px-2">
                   <p className="font-medium text-foreground">{zone.name}</p>

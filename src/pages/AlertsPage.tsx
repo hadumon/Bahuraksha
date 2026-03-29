@@ -34,13 +34,16 @@ export default function AlertsPage() {
     data: alerts = [],
     isLoading,
     error,
-  } = useQuery<AlertRow[]>(["alerts"], async () => {
-    const { data, error } = await supabase
-      .from("alerts")
-      .select("*")
-      .order("created_at", { ascending: false });
-    if (error) throw error;
-    return data;
+  } = useQuery<AlertRow[]>({
+    queryKey: ["alerts"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("alerts")
+        .select("*")
+        .order("created_at", { ascending: false });
+      if (error) throw error;
+      return data;
+    },
   });
 
   useEffect(() => {
@@ -50,7 +53,7 @@ export default function AlertsPage() {
         "postgres_changes",
         { event: "*", schema: "public", table: "alerts" },
         () => {
-          queryClient.invalidateQueries(["alerts"]);
+          queryClient.invalidateQueries({ queryKey: ["alerts"] });
         },
       )
       .subscribe();
@@ -89,7 +92,7 @@ export default function AlertsPage() {
         type: "flood",
         severity: "watch",
       });
-      queryClient.invalidateQueries(["alerts"]);
+      queryClient.invalidateQueries({ queryKey: ["alerts"] });
     }
   };
 
