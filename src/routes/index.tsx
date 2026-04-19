@@ -5,7 +5,6 @@ import { Navbar } from "@/components/flood/Navbar";
 import { ScrollRail } from "@/components/flood/ScrollRail";
 import { TelemetryHUD } from "@/components/flood/TelemetryHUD";
 import { FloodEventBanner } from "@/components/flood/FloodEventBanner";
-import { AlertLog } from "@/components/flood/AlertLog";
 import { useTelemetry } from "@/hooks/useTelemetry";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -16,9 +15,9 @@ export const Route = createFileRoute("/")({
   component: Index,
   head: () => ({
     meta: [
-      { title: "Hydrowatch · Disaster Intelligence for Flood Management" },
+      { title: "Bahuraksha · Disaster Intelligence for Flood Management" },
       { name: "description", content: "Real-time flood monitoring, scroll-driven 3D river visualization, and disaster intelligence for resilient communities." },
-      { property: "og:title", content: "Hydrowatch · Disaster Intelligence" },
+      { property: "og:title", content: "Bahuraksha · Disaster Intelligence" },
       { property: "og:description", content: "Real-time flood monitoring and disaster intelligence." },
     ],
   }),
@@ -54,7 +53,6 @@ function Index() {
       <ScrollRail />
       <TelemetryHUD t={telemetry} />
       <FloodEventBanner event={telemetry.event} />
-      <AlertLog alerts={telemetry.alertLog} />
 
       <main className="relative z-10">
         {/* SECTION 1 — HERO */}
@@ -165,7 +163,7 @@ function Index() {
 
           <footer id="about" className="mx-auto mt-32 max-w-6xl border-t border-white/10 pt-10 text-sm text-foreground/50">
             <div className="flex flex-wrap items-center justify-between gap-4">
-              <span>© Hydrowatch · Disaster Intelligence Platform</span>
+              <span>© Bahuraksha · Disaster Intelligence Platform</span>
               <span>Built for resilience.</span>
             </div>
           </footer>
