@@ -13,9 +13,10 @@ import {
   Snowflake,
 } from "lucide-react";
 import { useAuth } from "@/components/auth/useAuth";
+import { cn } from "@/lib/utils";
 
 const navItems = [
-  { path: "/", icon: LayoutDashboard, label: "Dashboard" },
+  { path: "/dashboard", icon: LayoutDashboard, label: "Dashboard" },
   { path: "/risk-map", icon: Map, label: "Risk Map" },
   { path: "/monitoring", icon: Activity, label: "River Monitoring" },
   { path: "/glof", icon: Snowflake, label: "GLOF Monitoring" },
@@ -33,16 +34,16 @@ interface Props {
 
 function BrandLink({ onClick }: { onClick?: () => void }) {
   return (
-    <Link to="/" onClick={onClick} className="flex items-center gap-3 min-w-0">
-      <div className="w-9 h-9 rounded-lg gradient-primary flex items-center justify-center flex-shrink-0">
-        <Shield className="w-5 h-5 text-primary-foreground" />
+    <Link to="/dashboard" onClick={onClick} className="flex items-center gap-3 min-w-0 group">
+      <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-ocean-400 to-ocean-600 flex items-center justify-center flex-shrink-0 shadow-glow group-hover:shadow-glow-primary transition-shadow">
+        <Shield className="w-5 h-5 text-white" />
       </div>
       <div className="overflow-hidden">
         <h1 className="text-sm font-bold text-foreground tracking-wide">
           BAHURAKSHA
         </h1>
         <p className="text-[10px] text-muted-foreground">
-          Bahuraksha | Flood Intelligence
+          Disaster Intelligence
         </p>
       </div>
     </Link>
@@ -63,66 +64,81 @@ export default function AppSidebar({ isMobile, mobileOpen, onClose }: Props) {
     return (
       <AnimatePresence>
         {mobileOpen && (
-          <motion.aside
-            initial={{ x: -280 }}
-            animate={{ x: 0 }}
-            exit={{ x: -280 }}
-            transition={{ duration: 0.2 }}
-            className="fixed left-0 top-0 h-screen w-[280px] bg-sidebar border-r border-sidebar-border z-50 flex flex-col"
-          >
-            <div className="flex items-center justify-between px-4 h-14 border-b border-sidebar-border gap-3">
-              <BrandLink onClick={onClose} />
-              <button
-                onClick={onClose}
-                className="text-muted-foreground hover:text-foreground"
-              >
-                <X className="w-5 h-5" />
-              </button>
-            </div>
-            <NavList location={location} onNavigate={onClose} />
-            <div className="px-3 py-3 border-t border-sidebar-border text-xs text-muted-foreground">
-              {user ? (
-                <div className="space-y-2">
-                  <p className="truncate">Signed in as: {user.email}</p>
-                  <button
-                    onClick={handleLogout}
-                    className="w-full text-left text-danger hover:text-foreground"
-                  >
-                    Sign out
-                  </button>
-                </div>
-              ) : (
+          <>
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={onClose}
+              className="fixed inset-0 bg-background/80 backdrop-blur-sm z-40"
+            />
+            <motion.aside
+              initial={{ x: -280 }}
+              animate={{ x: 0 }}
+              exit={{ x: -280 }}
+              transition={{ duration: 0.3, ease: [0.4, 0, 0.2, 1] }}
+              className="fixed left-0 top-0 h-screen w-[280px] bg-sidebar border-r border-sidebar-border z-50 flex flex-col"
+            >
+              <div className="flex items-center justify-between px-4 h-16 border-b border-sidebar-border gap-3">
+                <BrandLink onClick={onClose} />
                 <button
-                  onClick={() => {
-                    onClose();
-                    navigate("/login");
-                  }}
-                  className="w-full text-left text-primary hover:text-primary-foreground"
+                  onClick={onClose}
+                  className="p-2 rounded-lg text-muted-foreground hover:text-foreground hover:bg-sidebar-accent transition-colors"
                 >
-                  Sign in / Sign up
+                  <X className="w-5 h-5" />
                 </button>
-              )}
-            </div>
-          </motion.aside>
+              </div>
+              <NavList location={location} onNavigate={onClose} />
+              <div className="px-3 py-4 border-t border-sidebar-border">
+                {user ? (
+                  <div className="space-y-3">
+                    <div className="px-3 py-2 rounded-lg bg-sidebar-accent/50">
+                      <p className="text-xs text-muted-foreground">Signed in as</p>
+                      <p className="text-sm font-medium text-foreground truncate">{user.email}</p>
+                    </div>
+                    <button
+                      onClick={handleLogout}
+                      className="w-full px-3 py-2 text-left text-sm text-risk-evacuate hover:bg-risk-evacuate/10 rounded-lg transition-colors"
+                    >
+                      Sign out
+                    </button>
+                  </div>
+                ) : (
+                  <button
+                    onClick={() => {
+                      onClose();
+                      navigate("/login");
+                    }}
+                    className="w-full px-3 py-2 text-left text-sm text-ocean-400 hover:bg-ocean-400/10 rounded-lg transition-colors"
+                  >
+                    Sign in / Sign up
+                  </button>
+                )}
+              </div>
+            </motion.aside>
+          </>
         )}
       </AnimatePresence>
     );
   }
 
   return (
-    <aside className="fixed left-0 top-0 h-screen w-[240px] bg-sidebar border-r border-sidebar-border z-50 flex flex-col">
+    <aside className="fixed left-0 top-0 h-screen w-[260px] bg-sidebar border-r border-sidebar-border z-50 flex flex-col">
       <div className="px-4 h-16 border-b border-sidebar-border flex items-center">
         <BrandLink />
       </div>
       <NavList location={location} />
 
-      <div className="px-3 py-3 border-t border-sidebar-border text-xs text-muted-foreground">
+      <div className="px-3 py-4 border-t border-sidebar-border mt-auto">
         {user ? (
-          <div className="space-y-2">
-            <p className="truncate">Signed in as: {user.email}</p>
+          <div className="space-y-3">
+            <div className="px-3 py-2 rounded-lg bg-sidebar-accent/50">
+              <p className="text-xs text-muted-foreground">Signed in as</p>
+              <p className="text-sm font-medium text-foreground truncate">{user.email}</p>
+            </div>
             <button
               onClick={handleLogout}
-              className="w-full text-left text-danger hover:text-foreground"
+              className="w-full px-3 py-2 text-left text-sm text-risk-evacuate hover:bg-risk-evacuate/10 rounded-lg transition-colors"
             >
               Sign out
             </button>
@@ -130,7 +146,7 @@ export default function AppSidebar({ isMobile, mobileOpen, onClose }: Props) {
         ) : (
           <button
             onClick={() => navigate("/login")}
-            className="w-full text-left text-primary hover:text-primary-foreground"
+            className="w-full px-3 py-2 text-left text-sm text-ocean-400 hover:bg-ocean-400/10 rounded-lg transition-colors"
           >
             Sign in / Sign up
           </button>
@@ -156,16 +172,34 @@ function NavList({
             key={item.path}
             to={item.path}
             onClick={onNavigate}
-            className={`flex items-center gap-3 px-3 py-2.5 rounded-lg transition-all text-sm ${
+            className={cn(
+              "flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all duration-200 text-sm group relative overflow-hidden",
               isActive
-                ? "bg-primary/10 text-primary shadow-glow-primary"
-                : "text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
-            }`}
+                ? "bg-ocean-400/10 text-ocean-400 border border-ocean-400/20"
+                : "text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground border border-transparent"
+            )}
           >
+            {/* Active indicator */}
+            {isActive && (
+              <motion.div
+                layoutId="activeNav"
+                className="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-6 bg-ocean-400 rounded-full"
+                transition={{ type: "spring", stiffness: 380, damping: 30 }}
+              />
+            )}
+
             <item.icon
-              className={`w-5 h-5 flex-shrink-0 ${isActive ? "text-primary" : ""}`}
+              className={cn(
+                "w-5 h-5 flex-shrink-0 transition-colors",
+                isActive ? "text-ocean-400" : "text-muted-foreground group-hover:text-sidebar-accent-foreground"
+              )}
             />
-            <span className="truncate">{item.label}</span>
+            <span className="truncate font-medium">{item.label}</span>
+
+            {/* Active glow effect */}
+            {isActive && (
+              <div className="absolute inset-0 bg-ocean-400/5 rounded-xl" />
+            )}
           </Link>
         );
       })}

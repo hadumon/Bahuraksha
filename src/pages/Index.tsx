@@ -7,6 +7,8 @@ import {
   Users,
   Gauge,
   Brain,
+  Shield,
+  Radio,
 } from "lucide-react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import AppLayout from "@/components/layout/AppLayout";
@@ -17,6 +19,7 @@ import ZoneRiskTable from "@/components/dashboard/ZoneRiskTable";
 import RainfallChart from "@/components/dashboard/RainfallChart";
 import { fetchDashboardStats } from "@/lib/operationalData";
 import { supabase } from "@/integrations/supabase/client";
+import { cn } from "@/lib/utils";
 
 type AlertRow = {
   id: string;
@@ -27,6 +30,29 @@ type AlertRow = {
   zone: string;
   created_at?: string;
   is_active: boolean;
+};
+
+const containerVariants = {
+  hidden: { opacity: 0 },
+  visible: {
+    opacity: 1,
+    transition: {
+      staggerChildren: 0.08,
+      delayChildren: 0.1,
+    },
+  },
+};
+
+const itemVariants = {
+  hidden: { opacity: 0, y: 20 },
+  visible: {
+    opacity: 1,
+    y: 0,
+    transition: {
+      duration: 0.5,
+      ease: [0.4, 0, 0.2, 1],
+    },
+  },
 };
 
 export default function Index() {
@@ -57,7 +83,7 @@ export default function Index() {
         { event: "*", schema: "public", table: "alerts" },
         () => {
           queryClient.invalidateQueries({ queryKey: ["alerts"] });
-        },
+        }
       )
       .subscribe();
 
@@ -67,54 +93,94 @@ export default function Index() {
   }, [queryClient]);
 
   const activeAlerts = alerts.filter((alert) => alert.is_active).length;
+  const hasCriticalAlerts = alerts.some(
+    (a) => a.is_active && a.severity === "evacuate"
+  );
 
   return (
     <AppLayout>
-      <div className="p-4 md:p-6 space-y-6">
+      <motion.div
+        variants={containerVariants}
+        initial="hidden"
+        animate="visible"
+        className="p-4 md:p-6 lg:p-8 space-y-6"
+      >
         {/* Header */}
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
-          <div>
-            <h1 className="text-2xl font-bold text-foreground">
-              Command Dashboard
-            </h1>
-            <p className="text-sm text-muted-foreground mt-1">
-              Bagmati Basin • Real-time flood & landslide intelligence
-            </p>
+        <motion.div
+          variants={itemVariants}
+          className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 pb-4 border-b border-border/50"
+        >
+          <div className="flex items-center gap-4">
+            <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-gradient-to-br from-ocean-400 to-ocean-600 shadow-glow">
+              <Shield className="h-6 w-6 text-white" />
+            </div>
+            <div>
+              <h1 className="text-2xl font-bold tracking-tight text-foreground">
+                Command Dashboard
+              </h1>
+              <p className="text-sm text-muted-foreground">
+                Bagmati Basin • Real-time flood & landslide intelligence
+              </p>
+            </div>
           </div>
-          <div className="flex items-center gap-2">
-            <span className="w-2 h-2 rounded-full bg-risk-safe animate-pulse" />
-            <span className="text-xs font-mono text-muted-foreground">
-              System Online
-            </span>
+
+          <div className="flex items-center gap-3">
+            <div
+              className={cn(
+                "flex items-center gap-2 rounded-full border px-4 py-2",
+                hasCriticalAlerts
+                  ? "border-risk-evacuate/50 bg-risk-evacuate/10"
+                  : "border-ocean-400/30 bg-ocean-400/10"
+              )}
+            >
+              <span
+                className={cn(
+                  "h-2 w-2 rounded-full animate-pulse",
+                  hasCriticalAlerts ? "bg-risk-evacuate" : "bg-ocean-400"
+                )}
+              />
+              <Radio className="h-3.5 w-3.5 text-muted-foreground" />
+              <span className="text-xs font-medium text-foreground">
+                System {hasCriticalAlerts ? "Alert" : "Online"}
+              </span>
+            </div>
           </div>
-        </div>
+        </motion.div>
 
         {/* Stats row */}
-        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-3 md:gap-4">
+        <motion.div
+          variants={itemVariants}
+          className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4"
+        >
           <StatCard
             title="Active Alerts"
-            value={isLoading ? "…" : activeAlerts}
+            value={isLoading ? "—" : activeAlerts}
             icon={AlertTriangle}
-            variant="danger"
+            variant={activeAlerts > 0 ? "danger" : "default"}
             subtitle={`${activeAlerts} active`}
+            trend={activeAlerts > 0 ? "up" : "neutral"}
+            trendValue={activeAlerts > 0 ? "+1" : "stable"}
           />
           <StatCard
             title="Stations"
-            value={stats?.totalStations ?? "…"}
+            value={stats?.totalStations ?? "—"}
             icon={Activity}
             variant="primary"
             subtitle="All reporting"
+            trend="neutral"
           />
           <StatCard
             title="Sensors"
-            value={stats?.activeSensors ?? "…"}
+            value={stats?.activeSensors ?? "—"}
             icon={Gauge}
+            variant="default"
             subtitle="23 of 25 online"
           />
           <StatCard
             title="Citizen Reports"
-            value={stats?.citizenReports ?? "…"}
+            value={stats?.citizenReports ?? "—"}
             icon={Users}
+            variant="default"
             subtitle="Today"
           />
           <StatCard
@@ -128,12 +194,13 @@ export default function Index() {
             title="Prediction"
             value={stats?.predictionHorizon ?? "48h"}
             icon={Satellite}
+            variant="primary"
             subtitle="Lead time"
           />
-        </div>
+        </motion.div>
 
         {/* Main content grid */}
-        <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
+        <motion.div variants={itemVariants} className="grid grid-cols-1 xl:grid-cols-3 gap-6">
           <div className="xl:col-span-2 space-y-6">
             <RiverLevelChart />
             <ZoneRiskTable />
@@ -142,8 +209,8 @@ export default function Index() {
             <AlertFeed alerts={alerts} />
             <RainfallChart />
           </div>
-        </div>
-      </div>
+        </motion.div>
+      </motion.div>
     </AppLayout>
   );
 }

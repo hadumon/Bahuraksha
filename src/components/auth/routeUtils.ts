@@ -1,5 +1,6 @@
 import type { ComponentType } from "react";
 import Index from "@/pages/Index";
+import LandingPage from "@/pages/LandingPage";
 import RiskMapPage from "@/pages/RiskMapPage";
 import MonitoringPage from "@/pages/MonitoringPage";
 import AlertsPage from "@/pages/AlertsPage";
@@ -17,7 +18,8 @@ export type AppRoute = {
 
 export const appRoutes: AppRoute[] = [
   { path: "/login", component: LoginPage, isPublic: true },
-  { path: "/", component: Index, isPublic: false },
+  { path: "/", component: LandingPage, isPublic: true },
+  { path: "/dashboard", component: Index, isPublic: false },
   { path: "/risk-map", component: RiskMapPage, isPublic: false },
   { path: "/monitoring", component: MonitoringPage, isPublic: false },
   { path: "/alerts", component: AlertsPage, isPublic: false },
