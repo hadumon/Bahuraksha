@@ -117,7 +117,9 @@ export default function RainfallChart() {
         <div className="flex items-center gap-4">
           <div className="flex items-center gap-1.5">
             <span className="h-2 w-2 rounded-full bg-ocean-400" />
-            <span className="text-[10px] text-muted-foreground">Light (<10mm)</span>
+            <span className="text-[10px] text-muted-foreground">
+              {"Light (<10mm)"}
+            </span>
           </div>
           <div className="flex items-center gap-1.5">
             <span className="h-2 w-2 rounded-full bg-risk-watch" />

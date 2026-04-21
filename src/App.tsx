@@ -1,12 +1,10 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Route, Routes, useLocation } from "react-router-dom";
 import { Toaster as Sonner } from "@/components/ui/sonner";
-import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { AuthProvider } from "@/components/auth/AuthContext";
 import ProtectedRoute from "@/components/auth/ProtectedRoute";
 import { ThemeProvider } from "@/components/theme/ThemeProvider";
-import { appRoutes } from "@/components/auth/routeUtils";
 import { AnimatePresence, motion } from "framer-motion";
 import NotFound from "./pages/NotFound";
 import { Suspense, lazy } from "react";
@@ -216,7 +214,6 @@ const App = () => (
     <AuthProvider>
       <QueryClientProvider client={queryClient}>
         <TooltipProvider delayDuration={100}>
-          <Toaster />
           <Sonner
             position="bottom-right"
             toastOptions={{

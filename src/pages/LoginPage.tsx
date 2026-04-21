@@ -1,6 +1,6 @@
 import { FormEvent, useEffect, useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
-import { motion } from "framer-motion";
+import { AnimatePresence, motion } from "framer-motion";
 import { Eye, EyeOff, Shield, AlertCircle, Loader2, ArrowLeft } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -55,8 +55,8 @@ export default function LoginPage() {
     try {
       const result =
         mode === "signIn"
-          ? await signIn(email, password)
-          : await signUp(email, password);
+          ? await signIn(email.trim(), password)
+          : await signUp(email.trim(), password);
 
       if (result.error) {
         setError(result.error.message);
@@ -98,8 +98,8 @@ export default function LoginPage() {
       {/* Background decoration */}
       <div className="absolute inset-0 -z-10">
         <div className="absolute inset-0 bg-[radial-gradient(ellipse_80%_50%_at_50%_-20%,hsl(var(--primary)/0.15),transparent)]" />
-        <div className="absolute top-20 left-1/4 w-[500px] h-[500px] bg-ocean-400/5 rounded-full blur-[120px]" />
-        <div className="absolute bottom-20 right-1/4 w-[400px] h-[400px] bg-ocean-600/5 rounded-full blur-[100px]" />
+        <div className="absolute top-20 left-1/4 h-125 w-125 rounded-full bg-ocean-400/5 blur-[120px]" />
+        <div className="absolute right-1/4 bottom-20 h-100 w-100 rounded-full bg-ocean-600/5 blur-[100px]" />
       </div>
 
       <motion.div
@@ -126,7 +126,7 @@ export default function LoginPage() {
               initial={{ scale: 0.8 }}
               animate={{ scale: 1 }}
               transition={{ delay: 0.1 }}
-              className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-gradient-to-br from-ocean-400 to-ocean-600 mb-4 shadow-glow"
+              className="mb-4 inline-flex h-16 w-16 items-center justify-center rounded-2xl bg-linear-to-br from-ocean-400 to-ocean-600 shadow-glow"
             >
               <Shield className="w-8 h-8 text-white" />
             </motion.div>

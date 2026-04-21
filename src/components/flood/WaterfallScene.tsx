@@ -82,16 +82,18 @@ function WaterPlane({ flowSpeed }: { flowSpeed: number }) {
     >
       <planeGeometry ref={geomRef} args={[60, 120, 64, 128]} />
       <meshPhysicalMaterial
-        color="#06293d"
-        roughness={0.08}
-        metalness={0.6}
+        color="#0d5a7a"
+        emissive="#072d42"
+        emissiveIntensity={0.35}
+        roughness={0.14}
+        metalness={0.45}
         normalMap={normalTex1}
-        normalScale={new THREE.Vector2(0.8, 0.8)}
+        normalScale={new THREE.Vector2(1.15, 1.15)}
         clearcoat={1.0}
-        clearcoatRoughness={0.05}
+        clearcoatRoughness={0.08}
         clearcoatNormalMap={normalTex2}
-        clearcoatNormalScale={new THREE.Vector2(0.4, 0.4)}
-        envMapIntensity={2.5}
+        clearcoatNormalScale={new THREE.Vector2(0.6, 0.6)}
+        envMapIntensity={3.8}
         side={THREE.FrontSide}
       />
     </mesh>
@@ -149,7 +151,7 @@ function Riverbanks() {
       <mesh rotation={[-Math.PI / 2, 0, 0]} position={[-38, -0.1, 0]}>
         <planeGeometry ref={leftRef} args={[40, 120, 40, 80]} />
         <meshStandardMaterial
-          color="#0a1118"
+          color="#111d23"
           roughness={0.95}
           flatShading
         />
@@ -159,7 +161,7 @@ function Riverbanks() {
       <mesh rotation={[-Math.PI / 2, 0, 0]} position={[38, -0.1, 0]}>
         <planeGeometry ref={rightRef} args={[40, 120, 40, 80]} />
         <meshStandardMaterial
-          color="#0a1118"
+          color="#111d23"
           roughness={0.95}
           flatShading
         />
@@ -284,9 +286,9 @@ function CameraController({
     const s = smoothScroll.current;
 
     // Camera path: starts looking down the river, slowly descends
-    const camY = 8 - s * 5;      // 8 → 3
-    const camZ = -20 + s * 30;    // -20 → 10
-    const lookZ = 10 + s * 20;    // look further ahead as we scroll
+    const camY = 6.4 - s * 3.8;
+    const camZ = -14 + s * 24;
+    const lookZ = 8 + s * 18;
 
     // Gentle breathing sway
     const swayX = Math.sin(t * 0.3) * 0.4;
@@ -311,28 +313,35 @@ function SceneLighting() {
 
   useEffect(() => {
     scene.background = new THREE.Color("#050b14");
-    scene.fog = new THREE.FogExp2("#050b14", 0.012);
+    scene.fog = new THREE.FogExp2("#050b14", 0.008);
   }, [scene]);
 
   return (
     <>
-      <ambientLight intensity={0.15} color="#4488aa" />
+      <ambientLight intensity={0.4} color="#65b6d9" />
       <directionalLight
         position={[5, 10, -15]}
-        intensity={1.8}
+        intensity={2.6}
         color="#c4dff0"
         castShadow
       />
       <directionalLight
         position={[-8, 6, 10]}
-        intensity={0.6}
-        color="#2277aa"
+        intensity={1.1}
+        color="#3ca4db"
       />
       <pointLight
-        position={[0, 12, 20]}
-        intensity={40}
-        color="#88bbdd"
-        distance={60}
+        position={[0, 10, 8]}
+        intensity={80}
+        color="#78d9ff"
+        distance={90}
+        decay={2}
+      />
+      <pointLight
+        position={[0, 2, -8]}
+        intensity={26}
+        color="#1fb9ff"
+        distance={45}
         decay={2}
       />
     </>
@@ -393,7 +402,7 @@ export function WaterfallScene({
   return (
     <div className="absolute inset-0 w-full h-full">
       <Canvas
-        camera={{ position: [0, 8, -20], fov: 50, near: 0.1, far: 200 }}
+        camera={{ position: [0, 6.4, -14], fov: 46, near: 0.1, far: 200 }}
         gl={{
           antialias: !isMobile,
           alpha: false,
