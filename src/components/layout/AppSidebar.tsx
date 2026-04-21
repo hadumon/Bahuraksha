@@ -35,16 +35,16 @@ interface Props {
 function BrandLink({ onClick }: { onClick?: () => void }) {
   return (
     <Link to="/dashboard" onClick={onClick} className="flex items-center gap-3 min-w-0 group">
-      <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-ocean-400 to-ocean-600 flex items-center justify-center flex-shrink-0 shadow-glow group-hover:shadow-glow-primary transition-shadow">
-        <Shield className="w-5 h-5 text-white" />
+      <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-ocean-400 to-ocean-600 flex items-center justify-center flex-shrink-0 shadow-glow group-hover:shadow-glow-primary transition-shadow overflow-hidden">
+        <img
+          src="/Bahuraksha%20logo.svg"
+          alt="Bahuraksha Logo"
+          className="w-6 h-6 object-contain"
+        />
       </div>
       <div className="overflow-hidden">
-        <h1 className="text-sm font-bold text-foreground tracking-wide">
-          BAHURAKSHA
-        </h1>
-        <p className="text-[10px] text-muted-foreground">
-          Disaster Intelligence
-        </p>
+        <h1 className="text-sm font-bold text-foreground tracking-wide">BAHURAKSHA</h1>
+        <p className="text-[10px] text-muted-foreground">Disaster Intelligence</p>
       </div>
     </Link>
   );
@@ -176,7 +176,7 @@ function NavList({
               "flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all duration-200 text-sm group relative overflow-hidden",
               isActive
                 ? "bg-ocean-400/10 text-ocean-400 border border-ocean-400/20"
-                : "text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground border border-transparent"
+                : "text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground border border-transparent",
             )}
           >
             {/* Active indicator */}
@@ -191,15 +191,15 @@ function NavList({
             <item.icon
               className={cn(
                 "w-5 h-5 flex-shrink-0 transition-colors",
-                isActive ? "text-ocean-400" : "text-muted-foreground group-hover:text-sidebar-accent-foreground"
+                isActive
+                  ? "text-ocean-400"
+                  : "text-muted-foreground group-hover:text-sidebar-accent-foreground",
               )}
             />
             <span className="truncate font-medium">{item.label}</span>
 
             {/* Active glow effect */}
-            {isActive && (
-              <div className="absolute inset-0 bg-ocean-400/5 rounded-xl" />
-            )}
+            {isActive && <div className="absolute inset-0 bg-ocean-400/5 rounded-xl" />}
           </Link>
         );
       })}

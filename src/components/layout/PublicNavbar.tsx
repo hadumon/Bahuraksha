@@ -23,15 +23,15 @@ export function PublicNavbar() {
             </span>
           </Link>
           <div className="hidden md:flex items-center gap-8">
-            <a
-              href="/#about"
-              className={`text-sm transition-colors relative group ${location.hash === "#about" ? "text-foreground" : "text-muted-foreground hover:text-foreground"}`}
+            <Link
+              to="/about"
+              className={`text-sm transition-colors relative group ${isActive("/about") ? "text-foreground" : "text-muted-foreground hover:text-foreground"}`}
             >
               About
               <span
-                className={`absolute -bottom-1 left-0 h-0.5 bg-ocean-400 transition-all ${location.hash === "#about" ? "w-full" : "w-0 group-hover:w-full"}`}
+                className={`absolute -bottom-1 left-0 h-0.5 bg-ocean-400 transition-all ${isActive("/about") ? "w-full" : "w-0 group-hover:w-full"}`}
               />
-            </a>
+            </Link>
             <Link
               to="/disasters"
               className={`text-sm transition-colors relative group ${isActive("/disasters") ? "text-foreground" : "text-muted-foreground hover:text-foreground"}`}
