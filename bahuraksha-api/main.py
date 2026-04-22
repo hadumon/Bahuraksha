@@ -28,7 +28,7 @@ from rasterio.enums import Resampling
 from rasterio.crs import CRS
 from rasterio.warp import transform_bounds
 import requests
-import joblib
+import xgboost as xgb
 from fastapi import FastAPI, HTTPException, BackgroundTasks
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
@@ -88,11 +88,18 @@ CLASS_COLORS = {0: "#c8a96e", 1: "#1a6faf", 2: "#e8f4fd"}
 MODEL_PATH = os.environ.get("MODEL_PATH", "bahuraksha_xgb_model.ubj")
 
 try:
-    model = joblib.load(MODEL_PATH)
+    _booster = xgb.Booster()
+    _booster.load_model(MODEL_PATH)
+
+    model = xgb.XGBClassifier()
+    model._Booster = _booster
+    model.n_classes_ = 3
+    model.classes_ = np.array([0, 1, 2])
+
     log.info(f"Model loaded from {MODEL_PATH}")
-except FileNotFoundError:
+except Exception as e:
     model = None
-    log.warning(f"Model not found at {MODEL_PATH} — /predict will fail until loaded")
+    log.warning(f"Model not found at {MODEL_PATH} — {e}")
 
 # ── Pydantic schemas ──────────────────────────────────────────────────────────
 
