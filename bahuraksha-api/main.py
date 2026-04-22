@@ -99,7 +99,8 @@ except FileNotFoundError:
 class PredictRequest(BaseModel):
     date: str = Field(..., example="2024-08-15", description="Target date YYYY-MM-DD")
     bbox: Optional[list] = Field(None, description="[west, south, east, north] — defaults to Bahuraksha AOI")
-    lookback_days: int = Field(30, description="How many days back to search for scenes")
+    lookback_days: int = Field(60, description="How many days back to search for scenes")
+    cloud_max: int = Field(80, description="Maximum cloud cover allowed in scenes")
 
 class HealthResponse(BaseModel):
     model_config = {"protected_namespaces": ()}
@@ -110,7 +111,7 @@ class HealthResponse(BaseModel):
 # ── STAC scene search ─────────────────────────────────────────────────────────
 
 def search_stac(collection: str, bbox: list, date_str: str,
-                lookback_days: int = 30, cloud_max: int = 30) -> dict:
+                lookback_days: int = 30, cloud_max: int = 80) -> dict:
     """
     Find the most recent STAC scene for the given collection, bbox, and date.
     Returns the full STAC item dict including assets with COG hrefs.
@@ -383,7 +384,7 @@ def predict(req: PredictRequest):
     try:
         # ── 1. Find current scenes ────────────────────────────────────────
         s2_current_item = search_stac(
-            "sentinel-2-l2a", bbox, req.date, req.lookback_days
+            "sentinel-2-l2a", bbox, req.date, req.lookback_days, req.cloud_max
         )
         s1_current_item = search_stac(
             "sentinel-1-grd", bbox, req.date, req.lookback_days
@@ -397,7 +398,7 @@ def predict(req: PredictRequest):
             ).strftime("%Y-%m-%d")
             s2_ref_item = search_stac(
                 "sentinel-2-l2a", bbox, ref_date,
-                lookback_days=30, cloud_max=20
+                lookback_days=30, cloud_max=80
             )
             log.info(f"Reference S2 scene: {s2_ref_item['id']}")
         except HTTPException:
