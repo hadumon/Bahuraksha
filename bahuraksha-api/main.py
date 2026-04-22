@@ -85,7 +85,7 @@ CLASS_COLORS = {0: "#c8a96e", 1: "#1a6faf", 2: "#e8f4fd"}
 
 # ── Load model at startup ─────────────────────────────────────────────────────
 
-MODEL_PATH = os.environ.get("MODEL_PATH", "bahuraksha_xgb_model.joblib")
+MODEL_PATH = os.environ.get("MODEL_PATH", "bahuraksha_xgb_model.ujb")
 
 try:
     model = joblib.load(MODEL_PATH)
@@ -102,6 +102,7 @@ class PredictRequest(BaseModel):
     lookback_days: int = Field(30, description="How many days back to search for scenes")
 
 class HealthResponse(BaseModel):
+    model_config = {"protected_namespaces": ()}
     status: str
     model_loaded: bool
     model_type: str
