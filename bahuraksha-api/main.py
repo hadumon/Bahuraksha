@@ -85,7 +85,7 @@ CLASS_COLORS = {0: "#c8a96e", 1: "#1a6faf", 2: "#e8f4fd"}
 
 # ── Load model at startup ─────────────────────────────────────────────────────
 
-MODEL_PATH = os.environ.get("MODEL_PATH", "bahuraksha_clf.joblib")
+MODEL_PATH = os.environ.get("MODEL_PATH", "bahuraksha_xgb_model.joblib")
 
 try:
     model = joblib.load(MODEL_PATH)
@@ -123,11 +123,14 @@ def search_stac(collection: str, bbox: list, date_str: str,
         "bbox": bbox,
         "datetime": f"{date_from}/{date_to}",
         "limit": 1,
-        "sortby": [{"field": "datetime", "direction": "desc"}],
     }
 
     if collection == "sentinel-2-l2a":
-        body["query"] = {"eo:cloud_cover": {"lte": cloud_max}}
+        body["query"] = {
+            "eo:cloud_cover": {
+                "lt": 30
+            }
+        }
 
     if collection == "sentinel-1-grd":
         body["query"] = {
