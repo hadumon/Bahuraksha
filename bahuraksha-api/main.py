@@ -85,7 +85,7 @@ CLASS_COLORS = {0: "#c8a96e", 1: "#1a6faf", 2: "#e8f4fd"}
 
 # ── Load model at startup ─────────────────────────────────────────────────────
 
-MODEL_PATH = os.environ.get("MODEL_PATH", "bahuraksha_xgb_model.ujb")
+MODEL_PATH = os.environ.get("MODEL_PATH", "bahuraksha_xgb_model.ubj")
 
 try:
     model = joblib.load(MODEL_PATH)
