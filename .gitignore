@@ -1,4 +1,6 @@
-# Logs
+# =========================
+# LOGS
+# =========================
 logs
 *.log
 npm-debug.log*
@@ -7,26 +9,117 @@ yarn-error.log*
 pnpm-debug.log*
 lerna-debug.log*
 
-node_modules
-dist
-dist-ssr
-.output
-.vinxi
-.tanstack/**
-.nitro
-*.local
+# =========================
+# DEPENDENCIES
+# =========================
+node_modules/
+.pnp
+.pnp.js
 
-# Wrangler / Cloudflare
-.wrangler/
+# Python dependencies
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+
+# =========================
+# VIRTUAL ENVIRONMENT
+# =========================
+venv/
+.venv/
+env/
+ENV/
+
+# =========================
+# FRONTEND BUILD OUTPUTS
+# =========================
+dist/
+dist-ssr/
+.next/
+out/
+build/
+.output/
+.vinxi/
+
+# =========================
+# BACKEND / PYTHON FRAMEWORKS
+# =========================
+.nitro/
+.pytest_cache/
+.mypy_cache/
+.coverage
+coverage.xml
+
+# =========================
+# ENV FILES (IMPORTANT)
+# =========================
+.env
+.env.*
+!.env.example
 .dev.vars
 
-# Editor directories and files
+# =========================
+# CLOUD / DEPLOYMENT
+# =========================
+.wrangler/
+.serverless/
+.netlify/
+.vercel/
+
+# =========================
+# DATABASE FILES
+# =========================
+*.sqlite
+*.sqlite3
+
+# =========================
+# EDITORS / IDE
+# =========================
 .vscode/*
 !.vscode/extensions.json
-.idea
-.DS_Store
+.idea/
 *.suo
 *.ntvs*
 *.njsproj
 *.sln
 *.sw?
+
+# =========================
+# OS FILES
+# =========================
+.DS_Store
+Thumbs.db
+
+# =========================
+# TESTING / COVERAGE
+# =========================
+coverage/
+.pytest_cache/
+
+# =========================
+# TURBOPACK / NEXT / VITE
+# =========================
+.turbo/
+vite.config.ts.timestamp-*
+
+# =========================
+# TEMP / LOCAL
+# =========================
+*.local
+tmp/
+temp/
