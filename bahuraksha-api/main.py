@@ -88,13 +88,13 @@ CLASS_COLORS = {0: "#c8a96e", 1: "#1a6faf", 2: "#e8f4fd"}
 MODEL_PATH = os.environ.get("MODEL_PATH", "bahuraksha_xgb_model.ubj")
 
 try:
-    _booster = xgb.Booster()
-    _booster.load_model(MODEL_PATH)
+    model = xgb.Booster()
+    model.load_model(MODEL_PATH)
 
     model = xgb.XGBClassifier()
-    model._Booster = _booster
-    model.n_classes_ = 3
-    model.classes_ = np.array([0, 1, 2])
+    model._Booster = model
+    # model.n_classes_ = 3
+    # model.classes_ = np.array([0, 1, 2])
 
     log.info(f"Model loaded from {MODEL_PATH}")
 except Exception as e:
