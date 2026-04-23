@@ -99,7 +99,7 @@ try:
     log.info(f"Model loaded from {MODEL_PATH}")
 except Exception as e:
     model = None
-    log.warning(f"Model not found at {MODEL_PATH} — {e}")
+    log.error(f"FAILED to load model from {MODEL_PATH}: {type(e).__name__}: {e}")
 
 # ── Pydantic schemas ──────────────────────────────────────────────────────────
 
@@ -524,14 +524,31 @@ def history(days: int = 7):
 
     return {"history": results}
 
+
 @app.get("/debug", tags=["status"])
 def debug():
     import os
+    import xgboost as xgb
+
     cwd = os.getcwd()
     files = os.listdir(cwd)
+
+    # Try loading right now and capture the error
+    load_error = None
+    try:
+        b = xgb.Booster()
+        b.load_model("bahuraksha_xgb_model.ubj")
+        load_test = "SUCCESS"
+    except Exception as e:
+        load_test = "FAILED"
+        load_error = f"{type(e).__name__}: {e}"
+
     return {
         "cwd": cwd,
         "files_in_cwd": files,
         "model_path_env": os.environ.get("MODEL_PATH", "not set"),
         "model_loaded": model is not None,
+        "live_load_test": load_test,
+        "load_error": load_error,
+        "xgboost_version": xgb.__version__,
     }
