@@ -89,25 +89,12 @@ MODEL_PATH = os.environ.get(
 # ─────────────────────────────────────────────
 
 try:
-
-    booster = xgb.Booster()
-    booster.load_model(MODEL_PATH)
-
     model = xgb.XGBClassifier()
-    model._Booster = booster
-
-    model.n_classes_ = 3
-    model.classes_ = np.array([0, 1, 2])
-
+    model.load_model(MODEL_PATH)
     log.info(f"Model loaded from {MODEL_PATH}")
-
 except Exception as e:
-
     model = None
-
-    log.error(
-        f"FAILED to load model: {type(e).__name__}: {e}"
-    )
+    log.error(f"FAILED to load model: {type(e).__name__}: {e}")
 
 # ─────────────────────────────────────────────
 # Schemas
