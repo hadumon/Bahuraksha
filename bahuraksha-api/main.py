@@ -523,3 +523,15 @@ def history(days: int = 7):
             results.append({"date": date, "error": e.detail})
 
     return {"history": results}
+
+@app.get("/debug", tags=["status"])
+def debug():
+    import os
+    cwd = os.getcwd()
+    files = os.listdir(cwd)
+    return {
+        "cwd": cwd,
+        "files_in_cwd": files,
+        "model_path_env": os.environ.get("MODEL_PATH", "not set"),
+        "model_loaded": model is not None,
+    }
