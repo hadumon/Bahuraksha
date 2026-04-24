@@ -18,6 +18,17 @@ import RiverLevelChart from "@/components/dashboard/RiverLevelChart";
 import ZoneRiskTable from "@/components/dashboard/ZoneRiskTable";
 import RainfallChart from "@/components/dashboard/RainfallChart";
 import { fetchDashboardStats } from "@/lib/operationalData";
+import { getLatest, getHistory } from "@/lib/bahuraksha-api";
+import {
+  LineChart,
+  Line,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  ResponsiveContainer,
+  Legend,
+} from "recharts";
 import { supabase } from "@/integrations/supabase/client";
 import { cn } from "@/lib/utils";
 
@@ -58,6 +69,19 @@ const itemVariants = {
 export default function Index() {
   const queryClient = useQueryClient();
 
+  // Fetch today's flood/glacier prediction
+  // Fetch flood/glacier risk history for the last 7 days
+  const { data: history, isLoading: isHistoryLoading } = useQuery({
+    queryKey: ["bahuraksha-history", 7],
+    queryFn: () => getHistory(7),
+    staleTime: 1000 * 60 * 10,
+  });
+  const { data: prediction, isLoading: isPredictionLoading } = useQuery({
+    queryKey: ["bahuraksha-latest-prediction"],
+    queryFn: getLatest,
+    staleTime: 1000 * 60 * 10, // 10 min
+  });
+
   const { data: alerts = [], isLoading } = useQuery<AlertRow[]>({
     queryKey: ["alerts"],
     queryFn: async () => {
@@ -78,13 +102,9 @@ export default function Index() {
   useEffect(() => {
     const channel = supabase
       .channel("alerts-dashboard")
-      .on(
-        "postgres_changes",
-        { event: "*", schema: "public", table: "alerts" },
-        () => {
-          queryClient.invalidateQueries({ queryKey: ["alerts"] });
-        }
-      )
+      .on("postgres_changes", { event: "*", schema: "public", table: "alerts" }, () => {
+        queryClient.invalidateQueries({ queryKey: ["alerts"] });
+      })
       .subscribe();
 
     return () => {
@@ -93,9 +113,7 @@ export default function Index() {
   }, [queryClient]);
 
   const activeAlerts = alerts.filter((alert) => alert.is_active).length;
-  const hasCriticalAlerts = alerts.some(
-    (a) => a.is_active && a.severity === "evacuate"
-  );
+  const hasCriticalAlerts = alerts.some((a) => a.is_active && a.severity === "evacuate");
 
   return (
     <AppLayout>
@@ -130,13 +148,13 @@ export default function Index() {
                 "flex items-center gap-2 rounded-full border px-4 py-2",
                 hasCriticalAlerts
                   ? "border-risk-evacuate/50 bg-risk-evacuate/10"
-                  : "border-ocean-400/30 bg-ocean-400/10"
+                  : "border-ocean-400/30 bg-ocean-400/10",
               )}
             >
               <span
                 className={cn(
                   "h-2 w-2 rounded-full animate-pulse",
-                  hasCriticalAlerts ? "bg-risk-evacuate" : "bg-ocean-400"
+                  hasCriticalAlerts ? "bg-risk-evacuate" : "bg-ocean-400",
                 )}
               />
               <Radio className="h-3.5 w-3.5 text-muted-foreground" />
@@ -192,11 +210,66 @@ export default function Index() {
           />
           <StatCard
             title="Prediction"
-            value={stats?.predictionHorizon ?? "48h"}
+            value={
+              isPredictionLoading
+                ? "—"
+                : prediction?.prediction
+                  ? `${prediction.prediction.label.replace("_", " ").replace(/\b\w/g, (c) => c.toUpperCase())} (${prediction.prediction.risk_score})`
+                  : "N/A"
+            }
             icon={Satellite}
             variant="primary"
-            subtitle="Lead time"
+            subtitle={
+              isPredictionLoading
+                ? "Loading..."
+                : prediction?.prediction
+                  ? `Confidence: ${(prediction.prediction.confidence * 100).toFixed(0)}%`
+                  : "No data"
+            }
           />
+        </motion.div>
+
+        {/* Flood/Glacier Risk History Chart */}
+        <motion.div
+          variants={itemVariants}
+          className="w-full bg-card rounded-xl p-4 border border-border/50 shadow-card mb-4"
+        >
+          <h3 className="text-base font-semibold mb-2">Flood/Glacier Risk (Last 7 Days)</h3>
+          <ResponsiveContainer width="100%" height={220}>
+            <LineChart
+              data={history?.history || []}
+              margin={{ top: 10, right: 20, left: 0, bottom: 0 }}
+            >
+              <CartesianGrid strokeDasharray="3 3" stroke="#eee" />
+              <XAxis dataKey="date" tick={{ fontSize: 12 }} />
+              <YAxis domain={[0, 100]} tick={{ fontSize: 12 }} />
+              <Tooltip
+                formatter={(value, name) =>
+                  name === "risk_score" ? [`${value}`, "Risk Score"] : [value, name]
+                }
+              />
+              <Legend />
+              <Line
+                type="monotone"
+                dataKey="risk_score"
+                stroke="#ef4444"
+                strokeWidth={2}
+                name="Risk Score"
+                dot
+              />
+              <Line
+                type="monotone"
+                dataKey="confidence"
+                stroke="#0ea5e9"
+                strokeWidth={2}
+                name="Confidence"
+                dot
+              />
+            </LineChart>
+          </ResponsiveContainer>
+          {isHistoryLoading && (
+            <div className="text-xs text-muted-foreground mt-2">Loading history…</div>
+          )}
         </motion.div>
 
         {/* Main content grid */}
