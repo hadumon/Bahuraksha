@@ -9,6 +9,9 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import { useAuth } from "@/components/auth/useAuth";
 import { cn } from "@/lib/utils";
 
+const PASSWORD_REQUIREMENTS_MESSAGE =
+  "Password must be at least 8 characters and include uppercase, lowercase, and a number.";
+
 export default function LoginPage() {
   const { user, signIn, signUp, loading: authLoading } = useAuth();
   const navigate = useNavigate();
@@ -36,8 +39,12 @@ export default function LoginPage() {
       setError("Please enter a valid email address");
       return false;
     }
-    if (password.length < 6) {
-      setError("Password must be at least 6 characters");
+    const hasMinLength = password.length >= 8;
+    const hasLowercase = /[a-z]/.test(password);
+    const hasUppercase = /[A-Z]/.test(password);
+    const hasNumber = /\d/.test(password);
+    if (!hasMinLength || !hasLowercase || !hasUppercase || !hasNumber) {
+      setError(PASSWORD_REQUIREMENTS_MESSAGE);
       return false;
     }
     return true;
@@ -45,6 +52,7 @@ export default function LoginPage() {
 
   const onSubmit = async (event: FormEvent) => {
     event.preventDefault();
+    if (isSubmitting) return;
     setError("");
     setSuccessMessage("");
 
@@ -59,7 +67,11 @@ export default function LoginPage() {
           : await signUp(email.trim(), password);
 
       if (result.error) {
-        setError(result.error.message);
+        if (result.error.message.toLowerCase().includes("password")) {
+          setError(PASSWORD_REQUIREMENTS_MESSAGE);
+        } else {
+          setError(result.error.message);
+        }
       } else {
         if (mode === "signUp") {
           setSuccessMessage("Account created successfully! You can now sign in.");
@@ -223,7 +235,7 @@ export default function LoginPage() {
                   onChange={(e) => setPassword(e.target.value)}
                   placeholder="••••••••"
                   required
-                  minLength={6}
+                  minLength={8}
                   disabled={isSubmitting}
                   className="h-11 bg-secondary/50 border-border/50 focus:border-ocean-400 focus:ring-ocean-400/20 pr-10"
                 />
@@ -241,7 +253,7 @@ export default function LoginPage() {
                 </button>
               </div>
               <p className="text-xs text-muted-foreground">
-                Must be at least 6 characters
+                Use 8+ characters with uppercase, lowercase, and a number
               </p>
             </div>
 
