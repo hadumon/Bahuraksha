@@ -18,6 +18,7 @@ export default function RiverLevelChart() {
     queryKey: ["river-level-history", "Teku Station"],
     queryFn: () => fetchRiverLevelHistory("Teku Station"),
   });
+  const hasData = data.length > 0;
 
   return (
     <div className="rounded-2xl border border-border/50 bg-gradient-to-br from-card to-secondary/20 p-5 shadow-card overflow-hidden">
@@ -165,12 +166,16 @@ export default function RiverLevelChart() {
         <div className="flex items-center gap-2">
           <TrendingUp className="h-3.5 w-3.5 text-risk-safe" />
           <span className="text-xs text-muted-foreground">
-            Model accuracy: <span className="font-semibold text-foreground">87.3%</span>
+            {hasData ? "Teku station data loaded" : "Waiting for live station data"}
           </span>
         </div>
         <div className="flex items-center gap-2 text-xs">
-          <span className="h-2 w-2 rounded-full bg-ocean-400 animate-pulse" />
-          <span className="text-muted-foreground">Live data</span>
+          <span
+            className={`h-2 w-2 rounded-full ${
+              hasData ? "bg-ocean-400 animate-pulse" : "bg-muted-foreground/40"
+            }`}
+          />
+          <span className="text-muted-foreground">{hasData ? "Live data" : "No data"}</span>
         </div>
       </div>
     </div>

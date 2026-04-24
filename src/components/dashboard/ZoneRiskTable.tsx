@@ -175,7 +175,7 @@ export default function ZoneRiskTable() {
         </div>
 
         <span className="text-[10px] text-muted-foreground">
-          Updated hourly
+          Live database rows
         </span>
       </div>
     </div>

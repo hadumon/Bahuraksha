@@ -177,14 +177,14 @@ export default function Index() {
             variant={activeAlerts > 0 ? "danger" : "default"}
             subtitle={`${activeAlerts} active`}
             trend={activeAlerts > 0 ? "up" : "neutral"}
-            trendValue={activeAlerts > 0 ? "+1" : "stable"}
+            trendValue={activeAlerts > 0 ? "live" : "none"}
           />
           <StatCard
             title="Stations"
             value={stats?.totalStations ?? "—"}
             icon={Activity}
             variant="primary"
-            subtitle="All reporting"
+            subtitle="From live database"
             trend="neutral"
           />
           <StatCard
@@ -192,21 +192,21 @@ export default function Index() {
             value={stats?.activeSensors ?? "—"}
             icon={Gauge}
             variant="default"
-            subtitle="23 of 25 online"
+            subtitle="Reported by live sources"
           />
           <StatCard
             title="Citizen Reports"
             value={stats?.citizenReports ?? "—"}
             icon={Users}
             variant="default"
-            subtitle="Today"
+            subtitle="Current database count"
           />
           <StatCard
             title="Model Accuracy"
-            value={`${stats?.modelAccuracy ?? 87.3}%`}
+            value={stats?.modelAccuracy !== null && stats?.modelAccuracy !== undefined ? `${stats.modelAccuracy}%` : "—"}
             icon={Brain}
             variant="success"
-            subtitle="LSTM flood model"
+            subtitle={stats?.modelAccuracy !== null && stats?.modelAccuracy !== undefined ? "LSTM flood model" : "No live metric"}
           />
           <StatCard
             title="Prediction"
