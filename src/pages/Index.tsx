@@ -279,7 +279,12 @@ export default function Index() {
             <ZoneRiskTable />
           </div>
           <div className="space-y-6">
-            <AlertFeed alerts={alerts} />
+            <AlertFeed
+              alerts={alerts.map((a) => ({
+                ...a,
+                timestamp: a.created_at ?? new Date().toISOString(),
+              }))}
+            />
             <RainfallChart />
           </div>
         </motion.div>
