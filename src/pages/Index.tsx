@@ -18,7 +18,7 @@ import RiverLevelChart from "@/components/dashboard/RiverLevelChart";
 import ZoneRiskTable from "@/components/dashboard/ZoneRiskTable";
 import RainfallChart from "@/components/dashboard/RainfallChart";
 import { fetchDashboardStats } from "@/lib/operationalData";
-import { getLatest, getPrediction, getHistory } from "../lib/bahuraksha-api.tsx";
+import { getLatest, getPrediction, getHistory } from "../lib/bahuraksha-api.ts";
 import {
   LineChart,
   Line,
