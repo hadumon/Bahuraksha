@@ -20,9 +20,17 @@ type AlertRow = {
   is_active: boolean;
 };
 
+type AlertFormState = {
+  title: string;
+  message: string;
+  zone: string;
+  type: AlertRow["type"];
+  severity: AlertRow["severity"];
+};
+
 export default function AlertsPage() {
   const queryClient = useQueryClient();
-  const [formState, setFormState] = useState({
+  const [formState, setFormState] = useState<AlertFormState>({
     title: "",
     message: "",
     zone: "",
@@ -209,7 +217,12 @@ export default function AlertsPage() {
               ) : error ? (
                 <p className="text-danger">Error loading alerts</p>
               ) : (
-                <AlertFeed alerts={alerts} />
+                <AlertFeed
+                  alerts={alerts.map((alert) => ({
+                    ...alert,
+                    timestamp: alert.created_at ?? new Date().toISOString(),
+                  }))}
+                />
               )}
             </div>
           </div>

@@ -1,5 +1,5 @@
 import { useEffect } from "react";
-import { motion } from "framer-motion";
+import { motion, type Variants } from "framer-motion";
 import {
   Activity,
   AlertTriangle,
@@ -43,7 +43,7 @@ type AlertRow = {
   is_active: boolean;
 };
 
-const containerVariants = {
+const containerVariants: Variants = {
   hidden: { opacity: 0 },
   visible: {
     opacity: 1,
@@ -54,14 +54,14 @@ const containerVariants = {
   },
 };
 
-const itemVariants = {
+const itemVariants: Variants = {
   hidden: { opacity: 0, y: 20 },
   visible: {
     opacity: 1,
     y: 0,
     transition: {
       duration: 0.5,
-      ease: [0.4, 0, 0.2, 1],
+      ease: [0.4, 0, 0.2, 1] as const,
     },
   },
 };

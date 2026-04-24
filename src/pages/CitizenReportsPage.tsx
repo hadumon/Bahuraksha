@@ -15,9 +15,15 @@ const typeLabels = {
   other: '📝 Other',
 };
 
+type CitizenReportType = keyof typeof typeLabels;
+
 export default function CitizenReportsPage() {
   const [showForm, setShowForm] = useState(false);
-  const [formData, setFormData] = useState({ type: 'rising_water', description: '', location: '' });
+  const [formData, setFormData] = useState<{
+    type: CitizenReportType;
+    description: string;
+    location: string;
+  }>({ type: 'rising_water', description: '', location: '' });
   const [reports, setReports] = useState<any[]>([]);
 
   useEffect(() => {
@@ -69,7 +75,7 @@ export default function CitizenReportsPage() {
                 <label className="text-xs text-muted-foreground uppercase block mb-1">Report Type</label>
                 <select
                   value={formData.type}
-                  onChange={e => setFormData(prev => ({ ...prev, type: e.target.value }))}
+                  onChange={e => setFormData(prev => ({ ...prev, type: e.target.value as CitizenReportType }))}
                   className="w-full bg-secondary border border-border rounded-lg px-3 py-2 text-sm text-foreground"
                 >
                   {Object.entries(typeLabels).map(([val, label]) => (

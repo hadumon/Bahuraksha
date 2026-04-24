@@ -44,14 +44,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setUser(session?.user ?? null);
 
       if (event === "SIGNED_OUT") {
-        toast({
-          title: "Session expired",
+        toast.error("Session expired", {
           description: "Please sign in again.",
-          variant: "default",
         });
-      }
-
-      if (event === "SIGNED_OUT") {
         setUser(null);
       }
     });

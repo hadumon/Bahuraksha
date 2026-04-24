@@ -418,7 +418,17 @@ export async function fetchDataSources() {
     return fallbackDataSources();
   }
 
-  return data;
+  return data.map((source) => ({
+    id: source.id,
+    slug: source.slug,
+    name: source.name,
+    provider: source.provider,
+    category: source.category,
+    status: source.status,
+    description: source.description,
+    lastUpdated: source.last_updated,
+    metadata: source.metadata,
+  }));
 }
 
 export async function fetchLatestSentinelScenes(limit = 12) {
