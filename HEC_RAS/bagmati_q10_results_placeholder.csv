@@ -1,0 +1,6 @@
+station_id,station_name,river_km,lat,lng,scenario,flow_cms,water_surface_m,channel_invert_m,depth_m,velocity_ms,warning_level_m,danger_level_m,risk_level,arrival_time_hours
+st-2,Sundarijal Station,20.4,27.7700,85.4200,q10,210,3.92,0.85,3.07,2.10,3.8,4.5,warning,0.0
+st-3,Gokarna Station,15.8,27.7300,85.3700,q10,255,4.98,1.08,3.90,2.35,4.8,5.5,warning,1.4
+st-5,Pashupati Station,10.9,27.7100,85.3500,q10,285,5.12,1.05,4.07,2.55,4.8,5.5,warning,2.3
+st-4,Teku Station,5.4,27.6950,85.3050,q10,325,5.74,1.16,4.58,2.72,4.8,5.5,evacuate,3.1
+st-1,Chovar Station,0.8,27.6600,85.2900,q10,340,5.21,0.78,4.43,2.68,4.8,5.5,warning,4.0
