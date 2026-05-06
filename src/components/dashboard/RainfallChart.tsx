@@ -10,13 +10,16 @@ import {
   Cell,
 } from "recharts";
 import { fetchRainfallForecasts } from "@/lib/operationalData";
+import { normalizeRainfallForecasts, summarizeRainfall } from "@/lib/riskEngine";
 import { CloudRain, Droplets } from "lucide-react";
 
 export default function RainfallChart() {
-  const { data = [] } = useQuery({
+  const { data: rawData = [] } = useQuery({
     queryKey: ["rainfall-forecasts", "Bagmati Basin"],
     queryFn: () => fetchRainfallForecasts("Bagmati Basin"),
   });
+  const data = normalizeRainfallForecasts(rawData);
+  const summary = summarizeRainfall(data);
 
   const getBarColor = (value: number) => {
     if (value >= 50) return "hsl(var(--risk-evacuate))";
@@ -33,17 +36,18 @@ export default function RainfallChart() {
             <CloudRain className="h-4 w-4 text-ocean-400" />
           </div>
           <div>
-            <h3 className="text-sm font-semibold text-foreground">
-              7-Day Rainfall Forecast
-            </h3>
-            <p className="text-xs text-muted-foreground">Bagmati Basin • mm/day</p>
+            <h3 className="text-sm font-semibold text-foreground">7-Day Rainfall Risk Forecast</h3>
+            <p className="text-xs text-muted-foreground">
+              Bagmati Basin •{" "}
+              {summary.source === "database" ? "database forecast" : "local seasonal model"}
+            </p>
           </div>
         </div>
 
         <div className="flex items-center gap-1.5 rounded-lg bg-secondary/50 px-3 py-1.5">
           <Droplets className="h-3.5 w-3.5 text-ocean-400" />
           <span className="text-xs font-medium text-foreground">
-            {data.reduce((acc, d) => acc + (d.rainfall || 0), 0).toFixed(0)}mm
+            {summary.total7DayMm.toFixed(0)}mm
           </span>
           <span className="text-[10px] text-muted-foreground">total</span>
         </div>
@@ -58,18 +62,14 @@ export default function RainfallChart() {
             </linearGradient>
           </defs>
 
-          <CartesianGrid
-            strokeDasharray="3 3"
-            stroke="hsl(var(--border))"
-            vertical={false}
-          />
+          <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" vertical={false} />
 
           <XAxis
             dataKey="day"
             tick={{
-              fill: 'hsl(var(--muted-foreground))',
+              fill: "hsl(var(--muted-foreground))",
               fontSize: 10,
-              fontFamily: 'Fira Code'
+              fontFamily: "Fira Code",
             }}
             tickLine={false}
             axisLine={false}
@@ -77,9 +77,9 @@ export default function RainfallChart() {
 
           <YAxis
             tick={{
-              fill: 'hsl(var(--muted-foreground))',
+              fill: "hsl(var(--muted-foreground))",
               fontSize: 10,
-              fontFamily: 'Fira Code'
+              fontFamily: "Fira Code",
             }}
             tickLine={false}
             axisLine={false}
@@ -87,27 +87,20 @@ export default function RainfallChart() {
           />
 
           <Tooltip
-            cursor={{ fill: 'hsl(var(--muted))', opacity: 0.3 }}
+            cursor={{ fill: "hsl(var(--muted))", opacity: 0.3 }}
             contentStyle={{
-              background: 'hsl(var(--card))',
-              border: '1px solid hsl(var(--border))',
+              background: "hsl(var(--card))",
+              border: "1px solid hsl(var(--border))",
               borderRadius: 12,
               fontSize: 12,
-              boxShadow: 'var(--shadow-elevated)'
+              boxShadow: "var(--shadow-elevated)",
             }}
-            labelStyle={{ color: 'hsl(var(--foreground))', fontWeight: 600 }}
+            labelStyle={{ color: "hsl(var(--foreground))", fontWeight: 600 }}
           />
 
-          <Bar
-            dataKey="rainfall"
-            radius={[6, 6, 0, 0]}
-            maxBarSize={40}
-          >
+          <Bar dataKey="rainfall" radius={[6, 6, 0, 0]} maxBarSize={40}>
             {data.map((entry, index) => (
-              <Cell
-                key={`cell-${index}`}
-                fill={getBarColor(entry.rainfall)}
-              />
+              <Cell key={`cell-${index}`} fill={getBarColor(entry.rainfall)} />
             ))}
           </Bar>
         </BarChart>
@@ -117,9 +110,7 @@ export default function RainfallChart() {
         <div className="flex items-center gap-4">
           <div className="flex items-center gap-1.5">
             <span className="h-2 w-2 rounded-full bg-ocean-400" />
-            <span className="text-[10px] text-muted-foreground">
-              {"Light (<10mm)"}
-            </span>
+            <span className="text-[10px] text-muted-foreground">{"Light (<10mm)"}</span>
           </div>
           <div className="flex items-center gap-1.5">
             <span className="h-2 w-2 rounded-full bg-risk-watch" />
@@ -131,7 +122,9 @@ export default function RainfallChart() {
           </div>
         </div>
 
-        <span className="text-[10px] text-muted-foreground">NOAA GFS Model</span>
+        <span className="text-[10px] text-muted-foreground">
+          Peak {summary.peakDay}: {summary.maxDailyMm.toFixed(1)}mm • {summary.intensity}
+        </span>
       </div>
     </div>
   );

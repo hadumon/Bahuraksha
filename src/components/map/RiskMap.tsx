@@ -2,11 +2,14 @@ import { useEffect, useRef } from "react";
 import { useQuery } from "@tanstack/react-query";
 import {
   fetchCitizenReports,
+  fetchRainfallForecasts,
   fetchRiskZones,
   fetchRiverStations,
   fetchSatelliteProducts,
   type RiskLevel,
 } from "@/lib/operationalData";
+import { getLatest } from "@/lib/bahuraksha-api";
+import { computeCompositeRiskZones, normalizeRainfallForecasts } from "@/lib/riskEngine";
 import "leaflet/dist/leaflet.css";
 
 const riskColors: Record<RiskLevel, string> = {
@@ -36,6 +39,22 @@ export default function RiskMap({ className = "" }: { className?: string }) {
   const { data: satelliteProducts = [] } = useQuery({
     queryKey: ["satellite-products", "latest"],
     queryFn: fetchSatelliteProducts,
+  });
+  const { data: rainfallRows = [] } = useQuery({
+    queryKey: ["rainfall-forecasts", "Bagmati Basin"],
+    queryFn: () => fetchRainfallForecasts("Bagmati Basin"),
+  });
+  const { data: xgboostPrediction } = useQuery({
+    queryKey: ["bahuraksha-latest-prediction"],
+    queryFn: getLatest,
+    retry: 1,
+    staleTime: 1000 * 60 * 10,
+  });
+  const computedZones = computeCompositeRiskZones({
+    zones,
+    stations,
+    rainfall: normalizeRainfallForecasts(rainfallRows),
+    xgboostPrediction,
   });
 
   useEffect(() => {
@@ -82,12 +101,12 @@ export default function RiskMap({ className = "" }: { className?: string }) {
       });
       overlaysRef.current = [];
 
-      zones.forEach((zone) => {
+      computedZones.forEach((zone) => {
         const circle = L.circleMarker(zone.coordinates, {
           radius: Math.max(8, Math.sqrt(zone.population) / 15),
-          fillColor: riskColors[zone.riskLevel],
+          fillColor: riskColors[zone.computedRiskLevel],
           fillOpacity: 0.25,
-          color: riskColors[zone.riskLevel],
+          color: riskColors[zone.computedRiskLevel],
           weight: 2,
         }).addTo(mapInstanceRef.current);
 
@@ -95,7 +114,9 @@ export default function RiskMap({ className = "" }: { className?: string }) {
           <div style="font-size:13px">
             <strong>${zone.name}</strong><br/>
             <span style="color:#888">${zone.district}</span><br/>
-            Flood: ${(zone.floodProb * 100).toFixed(0)}%<br/>
+            Composite flood risk: ${(zone.computedFloodProb * 100).toFixed(0)}%<br/>
+            Stored flood prior: ${(zone.floodProb * 100).toFixed(0)}%<br/>
+            Nearest station: ${zone.nearestStationName ?? "n/a"}<br/>
             Landslide: ${(zone.landslideProb * 100).toFixed(0)}%
           </div>
         `);
@@ -171,7 +192,7 @@ export default function RiskMap({ className = "" }: { className?: string }) {
     return () => {
       cancelled = true;
     };
-  }, [reports, satelliteProducts, stations, zones]);
+  }, [computedZones, reports, satelliteProducts, stations]);
 
   return (
     <div className={`rounded-xl overflow-hidden border border-border ${className}`}>

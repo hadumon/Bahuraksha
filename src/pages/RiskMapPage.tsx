@@ -2,7 +2,14 @@ import AppLayout from "@/components/layout/AppLayout";
 import RiskMap from "@/components/map/RiskMap";
 import RiskLevelBadge from "@/components/dashboard/RiskLevelBadge";
 import { useQuery } from "@tanstack/react-query";
-import { fetchRiskZones, type RiskLevel } from "@/lib/operationalData";
+import {
+  fetchRainfallForecasts,
+  fetchRiskZones,
+  fetchRiverStations,
+  type RiskLevel,
+} from "@/lib/operationalData";
+import { getLatest } from "@/lib/bahuraksha-api";
+import { computeCompositeRiskZones, normalizeRainfallForecasts } from "@/lib/riskEngine";
 
 const legendItems: { level: RiskLevel; desc: string }[] = [
   { level: "safe", desc: "Normal conditions" },
@@ -16,17 +23,35 @@ export default function RiskMapPage() {
     queryKey: ["risk-zones"],
     queryFn: fetchRiskZones,
   });
+  const { data: stations = [] } = useQuery({
+    queryKey: ["river-stations"],
+    queryFn: fetchRiverStations,
+  });
+  const { data: rainfallRows = [] } = useQuery({
+    queryKey: ["rainfall-forecasts", "Bagmati Basin"],
+    queryFn: () => fetchRainfallForecasts("Bagmati Basin"),
+  });
+  const { data: xgboostPrediction } = useQuery({
+    queryKey: ["bahuraksha-latest-prediction"],
+    queryFn: getLatest,
+    retry: 1,
+    staleTime: 1000 * 60 * 10,
+  });
+  const computedZones = computeCompositeRiskZones({
+    zones: zoneRisks,
+    stations,
+    rainfall: normalizeRainfallForecasts(rainfallRows),
+    xgboostPrediction,
+  });
 
   return (
     <AppLayout>
       <div className="p-4 md:p-6 space-y-4">
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
           <div>
-            <h1 className="text-xl md:text-2xl font-bold text-foreground">
-              Risk Map
-            </h1>
+            <h1 className="text-xl md:text-2xl font-bold text-foreground">Risk Map</h1>
             <p className="text-sm text-muted-foreground mt-1">
-              Composite risk overlay — Bagmati Basin, Kathmandu Valley
+              Composite risk overlay — rainfall + gauges + XGBoost + HEC-RAS
             </p>
           </div>
           <div className="flex flex-wrap items-center gap-2">
@@ -46,33 +71,24 @@ export default function RiskMapPage() {
             <h3 className="text-sm font-semibold text-foreground uppercase tracking-wider">
               Zones
             </h3>
-            {zoneRisks.map((zone) => (
-              <div
-                key={zone.id}
-                className="gradient-card p-3 rounded-lg border border-border"
-              >
+            {computedZones.map((zone) => (
+              <div key={zone.id} className="gradient-card p-3 rounded-lg border border-border">
                 <div className="flex items-center justify-between mb-1">
-                  <span className="text-sm font-medium text-foreground">
-                    {zone.name}
-                  </span>
-                  <RiskLevelBadge level={zone.riskLevel} />
+                  <span className="text-sm font-medium text-foreground">{zone.name}</span>
+                  <RiskLevelBadge level={zone.computedRiskLevel} />
                 </div>
                 <div className="grid grid-cols-2 gap-2 mt-2">
                   <div>
-                    <p className="text-[10px] text-muted-foreground uppercase">
-                      Flood
-                    </p>
+                    <p className="text-[10px] text-muted-foreground uppercase">Flood</p>
                     <div className="w-full h-1.5 bg-secondary rounded-full mt-1">
                       <div
                         className="h-full rounded-full bg-primary"
-                        style={{ width: `${zone.floodProb * 100}%` }}
+                        style={{ width: `${zone.computedFloodProb * 100}%` }}
                       />
                     </div>
                   </div>
                   <div>
-                    <p className="text-[10px] text-muted-foreground uppercase">
-                      Landslide
-                    </p>
+                    <p className="text-[10px] text-muted-foreground uppercase">Landslide</p>
                     <div className="w-full h-1.5 bg-secondary rounded-full mt-1">
                       <div
                         className="h-full rounded-full bg-risk-warning"

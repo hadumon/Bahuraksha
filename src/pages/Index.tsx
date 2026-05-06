@@ -18,6 +18,7 @@ import RiverLevelChart from "@/components/dashboard/RiverLevelChart";
 import ZoneRiskTable from "@/components/dashboard/ZoneRiskTable";
 import RainfallChart from "@/components/dashboard/RainfallChart";
 import { fetchDashboardStats } from "@/lib/operationalData";
+import ModelStatusPanel from "@/components/dashboard/ModelStatusPanel";
 import { getLatest, getPrediction, getHistory } from "../lib/bahuraksha-api.ts";
 import {
   LineChart,
@@ -202,11 +203,13 @@ export default function Index() {
             subtitle="Current database count"
           />
           <StatCard
-            title="Model Accuracy"
-            value={stats?.modelAccuracy !== null && stats?.modelAccuracy !== undefined ? `${stats.modelAccuracy}%` : "—"}
+            title="Model Status"
+            value={prediction?.prediction ? "Active" : "—"}
             icon={Brain}
             variant="success"
-            subtitle={stats?.modelAccuracy !== null && stats?.modelAccuracy !== undefined ? "LSTM flood model" : "No live metric"}
+            subtitle={
+              prediction?.prediction ? "XGBoost latest available" : "No live model response"
+            }
           />
           <StatCard
             title="Prediction"
@@ -279,6 +282,7 @@ export default function Index() {
             <ZoneRiskTable />
           </div>
           <div className="space-y-6">
+            <ModelStatusPanel />
             <AlertFeed
               alerts={alerts.map((a) => ({
                 ...a,

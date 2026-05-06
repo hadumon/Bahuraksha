@@ -1,6 +1,8 @@
 import { useQuery } from "@tanstack/react-query";
 import RiskLevelBadge from "./RiskLevelBadge";
-import { fetchRiskZones } from "@/lib/operationalData";
+import { fetchRainfallForecasts, fetchRiskZones, fetchRiverStations } from "@/lib/operationalData";
+import { getLatest } from "@/lib/bahuraksha-api";
+import { computeCompositeRiskZones, normalizeRainfallForecasts } from "@/lib/riskEngine";
 import { MapPin, Users, TrendingDown, TrendingUp, Activity } from "lucide-react";
 import { motion } from "framer-motion";
 import { cn } from "@/lib/utils";
@@ -10,10 +12,31 @@ export default function ZoneRiskTable() {
     queryKey: ["risk-zones"],
     queryFn: fetchRiskZones,
   });
+  const { data: stations = [] } = useQuery({
+    queryKey: ["river-stations"],
+    queryFn: fetchRiverStations,
+  });
+  const { data: rainfallRows = [] } = useQuery({
+    queryKey: ["rainfall-forecasts", "Bagmati Basin"],
+    queryFn: () => fetchRainfallForecasts("Bagmati Basin"),
+  });
+  const { data: xgboostPrediction } = useQuery({
+    queryKey: ["bahuraksha-latest-prediction"],
+    queryFn: getLatest,
+    retry: 1,
+    staleTime: 1000 * 60 * 10,
+  });
 
-  const sorted = [...zones].sort((a, b) => {
+  const computedZones = computeCompositeRiskZones({
+    zones,
+    stations,
+    rainfall: normalizeRainfallForecasts(rainfallRows),
+    xgboostPrediction,
+  });
+
+  const sorted = [...computedZones].sort((a, b) => {
     const order = { evacuate: 0, warning: 1, watch: 2, safe: 3 } as const;
-    return order[a.riskLevel] - order[b.riskLevel];
+    return order[a.computedRiskLevel] - order[b.computedRiskLevel];
   });
 
   const getRiskIcon = (level: string) => {
@@ -37,11 +60,9 @@ export default function ZoneRiskTable() {
             <MapPin className="h-4 w-4 text-ocean-400" />
           </div>
           <div>
-            <h3 className="text-sm font-semibold text-foreground">
-              Zone Risk Assessment
-            </h3>
+            <h3 className="text-sm font-semibold text-foreground">Zone Risk Assessment</h3>
             <p className="text-xs text-muted-foreground">
-              {sorted.length} zones monitored
+              Composite risk from rainfall, gauges, XGBoost, HEC-RAS, and stored zone priors
             </p>
           </div>
         </div>
@@ -87,42 +108,42 @@ export default function ZoneRiskTable() {
                 transition={{ delay: index * 0.05 }}
                 className={cn(
                   "border-b border-border/30 transition-colors hover:bg-secondary/30",
-                  zone.riskLevel === "evacuate" && "bg-risk-evacuate/5",
-                  zone.riskLevel === "warning" && "bg-risk-warning/5"
+                  zone.computedRiskLevel === "evacuate" && "bg-risk-evacuate/5",
+                  zone.computedRiskLevel === "warning" && "bg-risk-warning/5",
                 )}
               >
                 <td className="py-3 pl-2 pr-4">
                   <div className="flex items-center gap-2">
                     <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-secondary/50">
-                      {getRiskIcon(zone.riskLevel)}
+                      {getRiskIcon(zone.computedRiskLevel)}
                     </div>
                     <div>
                       <p className="font-medium text-foreground">{zone.name}</p>
-                      <p className="text-[11px] text-muted-foreground">
-                        {zone.district}
-                      </p>
+                      <p className="text-[11px] text-muted-foreground">{zone.district}</p>
                     </div>
                   </div>
                 </td>
 
                 <td className="py-3 px-2">
-                  <RiskLevelBadge level={zone.riskLevel} />
+                  <RiskLevelBadge level={zone.computedRiskLevel} />
                 </td>
 
                 <td className="py-3 px-2 text-right">
                   <div className="flex flex-col items-end gap-0.5">
                     <span className="font-mono text-xs font-medium">
-                      {(zone.floodProb * 100).toFixed(0)}%
+                      {(zone.computedFloodProb * 100).toFixed(0)}%
                     </span>
                     <div className="h-1 w-12 overflow-hidden rounded-full bg-secondary">
                       <div
                         className={cn(
                           "h-full rounded-full transition-all",
-                          zone.floodProb > 0.7 && "bg-risk-evacuate",
-                          zone.floodProb > 0.4 && zone.floodProb <= 0.7 && "bg-risk-warning",
-                          zone.floodProb <= 0.4 && "bg-ocean-400"
+                          zone.computedFloodProb > 0.7 && "bg-risk-evacuate",
+                          zone.computedFloodProb > 0.4 &&
+                            zone.computedFloodProb <= 0.7 &&
+                            "bg-risk-warning",
+                          zone.computedFloodProb <= 0.4 && "bg-ocean-400",
                         )}
-                        style={{ width: `${zone.floodProb * 100}%` }}
+                        style={{ width: `${zone.computedFloodProb * 100}%` }}
                       />
                     </div>
                   </div>
@@ -138,8 +159,10 @@ export default function ZoneRiskTable() {
                         className={cn(
                           "h-full rounded-full transition-all",
                           zone.landslideProb > 0.7 && "bg-risk-evacuate",
-                          zone.landslideProb > 0.4 && zone.landslideProb <= 0.7 && "bg-risk-warning",
-                          zone.landslideProb <= 0.4 && "bg-ocean-400"
+                          zone.landslideProb > 0.4 &&
+                            zone.landslideProb <= 0.7 &&
+                            "bg-risk-warning",
+                          zone.landslideProb <= 0.4 && "bg-ocean-400",
                         )}
                         style={{ width: `${zone.landslideProb * 100}%` }}
                       />
@@ -163,20 +186,18 @@ export default function ZoneRiskTable() {
           <div className="flex items-center gap-1.5">
             <span className="h-2 w-2 rounded-full bg-risk-evacuate" />
             <span className="text-[10px] text-muted-foreground">
-              {sorted.filter((z) => z.riskLevel === "evacuate").length} Critical
+              {sorted.filter((z) => z.computedRiskLevel === "evacuate").length} Critical
             </span>
           </div>
           <div className="flex items-center gap-1.5">
             <span className="h-2 w-2 rounded-full bg-risk-warning" />
             <span className="text-[10px] text-muted-foreground">
-              {sorted.filter((z) => z.riskLevel === "warning").length} Warning
+              {sorted.filter((z) => z.computedRiskLevel === "warning").length} Warning
             </span>
           </div>
         </div>
 
-        <span className="text-[10px] text-muted-foreground">
-          Live database rows
-        </span>
+        <span className="text-[10px] text-muted-foreground">Composite risk engine</span>
       </div>
     </div>
   );
