@@ -529,6 +529,50 @@ def health():
         "model_type": type(model).__name__ if model else "none",
     }
 
+@app.get("/ready")
+def ready():
+    if model is None:
+        raise HTTPException(status_code=503, detail="Model not loaded")
+
+    return {
+        "status": "ready",
+        "model_loaded": True,
+        "feature_count": 16,
+    }
+
+@app.get("/version")
+def version():
+    return {
+        "api_version": app.version,
+        "model_path": MODEL_PATH,
+        "model_loaded": model is not None,
+        "xgboost_version": xgb.__version__,
+        "feature_schema": [
+            "B2", "B3", "B4", "B8", "B11", "B12",
+            "NDWI", "NDSI", "NDVI", "dNDWI", "dNDSI", "dNDVI",
+            "VH_db", "VV_db", "elevation_m", "slope_deg",
+        ],
+    }
+
+@app.post("/debug/features")
+def debug_features(req: PredictRequest):
+    bbox = req.bbox or BAHURAKSHA_BBOX
+    s2_current_item = search_stac("sentinel-2-l2a", bbox, req.date, req.lookback_days, req.cloud_max)
+    s1_current_item = search_stac("sentinel-1-grd", bbox, req.date, req.lookback_days)
+    s2_current = extract_s2_features(s2_current_item, bbox)
+    s1_current = extract_s1_features(s1_current_item, bbox)
+    change = compute_change_indices(s2_current, None)
+    X = build_feature_vector(s2_current, s1_current, change)
+
+    return {
+        "date": req.date,
+        "bbox": bbox,
+        "s2": s2_current,
+        "s1": s1_current,
+        "change": change,
+        "feature_vector": X[0].tolist(),
+    }
+
 @app.post("/predict")
 def predict(req: PredictRequest):
 

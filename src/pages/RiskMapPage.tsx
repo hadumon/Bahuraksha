@@ -1,3 +1,4 @@
+import { useState } from "react";
 import AppLayout from "@/components/layout/AppLayout";
 import RiskMap from "@/components/map/RiskMap";
 import RiskLevelBadge from "@/components/dashboard/RiskLevelBadge";
@@ -10,6 +11,7 @@ import {
 } from "@/lib/operationalData";
 import { getLatest } from "@/lib/bahuraksha-api";
 import { computeCompositeRiskZones, normalizeRainfallForecasts } from "@/lib/riskEngine";
+import { persistRiskAssessments } from "@/lib/riskAssessments";
 
 const legendItems: { level: RiskLevel; desc: string }[] = [
   { level: "safe", desc: "Normal conditions" },
@@ -19,6 +21,7 @@ const legendItems: { level: RiskLevel; desc: string }[] = [
 ];
 
 export default function RiskMapPage() {
+  const [persistStatus, setPersistStatus] = useState<string | null>(null);
   const { data: zoneRisks = [] } = useQuery({
     queryKey: ["risk-zones"],
     queryFn: fetchRiskZones,
@@ -44,6 +47,16 @@ export default function RiskMapPage() {
     xgboostPrediction,
   });
 
+  const handlePersistAssessments = async () => {
+    setPersistStatus("Saving assessments...");
+    const result = await persistRiskAssessments(computedZones);
+    setPersistStatus(
+      result.error
+        ? `Save failed: ${result.error}`
+        : `Saved ${result.inserted} risk assessments and triggered alert automation.`,
+    );
+  };
+
   return (
     <AppLayout>
       <div className="p-4 md:p-6 space-y-4">
@@ -55,6 +68,13 @@ export default function RiskMapPage() {
             </p>
           </div>
           <div className="flex flex-wrap items-center gap-2">
+            <button
+              type="button"
+              onClick={handlePersistAssessments}
+              className="rounded-lg border border-ocean-400/40 bg-ocean-400/10 px-3 py-1.5 text-xs font-medium text-ocean-400 hover:bg-ocean-400/20"
+            >
+              Persist assessments
+            </button>
             {legendItems.map((item) => (
               <div key={item.level} className="flex items-center gap-1.5">
                 <RiskLevelBadge level={item.level} />
@@ -62,6 +82,8 @@ export default function RiskMapPage() {
             ))}
           </div>
         </div>
+
+        {persistStatus && <p className="text-xs text-muted-foreground">{persistStatus}</p>}
 
         <div className="grid grid-cols-1 xl:grid-cols-4 gap-4">
           <div className="xl:col-span-3">
@@ -95,6 +117,9 @@ export default function RiskMapPage() {
                         style={{ width: `${zone.landslideProb * 100}%` }}
                       />
                     </div>
+                  </div>
+                  <div className="mt-2 text-[10px] uppercase tracking-wider text-muted-foreground">
+                    Data quality: {zone.dataQuality}
                   </div>
                 </div>
               </div>

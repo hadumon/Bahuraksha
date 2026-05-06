@@ -110,16 +110,17 @@ export default function RiskMap({ className = "" }: { className?: string }) {
           weight: 2,
         }).addTo(mapInstanceRef.current);
 
-        circle.bindPopup(`
-          <div style="font-size:13px">
-            <strong>${zone.name}</strong><br/>
-            <span style="color:#888">${zone.district}</span><br/>
-            Composite flood risk: ${(zone.computedFloodProb * 100).toFixed(0)}%<br/>
-            Stored flood prior: ${(zone.floodProb * 100).toFixed(0)}%<br/>
-            Nearest station: ${zone.nearestStationName ?? "n/a"}<br/>
-            Landslide: ${(zone.landslideProb * 100).toFixed(0)}%
-          </div>
-        `);
+        circle.bindPopup(
+          createPopupNode([
+            [zone.name, true],
+            [zone.district],
+            [`Composite flood risk: ${(zone.computedFloodProb * 100).toFixed(0)}%`],
+            [`Stored flood prior: ${(zone.floodProb * 100).toFixed(0)}%`],
+            [`Nearest station: ${zone.nearestStationName ?? "n/a"}`],
+            [`Data quality: ${zone.dataQuality}`],
+            [`Landslide: ${(zone.landslideProb * 100).toFixed(0)}%`],
+          ]),
+        );
 
         overlaysRef.current.push(circle);
       });
@@ -133,14 +134,14 @@ export default function RiskMap({ className = "" }: { className?: string }) {
           weight: 2,
         }).addTo(mapInstanceRef.current);
 
-        marker.bindPopup(`
-          <div style="font-size:13px">
-            <strong>${station.name}</strong><br/>
-            Level: ${station.currentLevel}m / ${station.dangerLevel}m danger<br/>
-            Trend: ${station.trend}<br/>
-            Updated: ${new Date(station.lastUpdated).toLocaleString()}
-          </div>
-        `);
+        marker.bindPopup(
+          createPopupNode([
+            [station.name, true],
+            [`Level: ${station.currentLevel}m / ${station.dangerLevel}m danger`],
+            [`Trend: ${station.trend}`],
+            [`Updated: ${new Date(station.lastUpdated).toLocaleString()}`],
+          ]),
+        );
 
         overlaysRef.current.push(marker);
       });
@@ -154,13 +155,13 @@ export default function RiskMap({ className = "" }: { className?: string }) {
           weight: 1,
         }).addTo(mapInstanceRef.current);
 
-        dot.bindPopup(`
-          <div style="font-size:13px">
-            <strong>${report.locationName}</strong><br/>
-            <span>${report.description}</span><br/>
-            Trust: ${(report.trustScore * 100).toFixed(0)}%
-          </div>
-        `);
+        dot.bindPopup(
+          createPopupNode([
+            [report.locationName, true],
+            [report.description],
+            [`Trust: ${(report.trustScore * 100).toFixed(0)}%`],
+          ]),
+        );
 
         overlaysRef.current.push(dot);
       });
@@ -176,14 +177,14 @@ export default function RiskMap({ className = "" }: { className?: string }) {
           },
         }).addTo(mapInstanceRef.current);
 
-        layer.bindPopup(`
-          <div style="font-size:13px">
-            <strong>${product.sourceSlug}</strong><br/>
-            Product: ${product.productType}<br/>
-            Observed: ${new Date(product.observedAt).toLocaleString()}<br/>
-            Flood area: ${product.floodAreaKm2 ?? "n/a"} km²
-          </div>
-        `);
+        layer.bindPopup(
+          createPopupNode([
+            [product.sourceSlug, true],
+            [`Product: ${product.productType}`],
+            [`Observed: ${new Date(product.observedAt).toLocaleString()}`],
+            [`Flood area: ${product.floodAreaKm2 ?? "n/a"} km²`],
+          ]),
+        );
 
         overlaysRef.current.push(layer);
       });
@@ -203,4 +204,19 @@ export default function RiskMap({ className = "" }: { className?: string }) {
       />
     </div>
   );
+}
+
+function createPopupNode(rows: Array<[string, boolean?]>) {
+  const container = document.createElement("div");
+  container.style.fontSize = "13px";
+
+  rows.forEach(([text, strong], index) => {
+    const element = document.createElement(strong ? "strong" : "span");
+    element.textContent = text;
+    if (!strong && index === 1) element.style.color = "#888";
+    container.appendChild(element);
+    if (index < rows.length - 1) container.appendChild(document.createElement("br"));
+  });
+
+  return container;
 }

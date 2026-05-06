@@ -17,8 +17,15 @@ import AlertFeed from "@/components/dashboard/AlertFeed";
 import RiverLevelChart from "@/components/dashboard/RiverLevelChart";
 import ZoneRiskTable from "@/components/dashboard/ZoneRiskTable";
 import RainfallChart from "@/components/dashboard/RainfallChart";
-import { fetchDashboardStats } from "@/lib/operationalData";
+import {
+  fetchDashboardStats,
+  fetchRainfallForecasts,
+  fetchRiskZones,
+  fetchRiverStations,
+} from "@/lib/operationalData";
 import ModelStatusPanel from "@/components/dashboard/ModelStatusPanel";
+import RiskExplanationPanel from "@/components/dashboard/RiskExplanationPanel";
+import { computeCompositeRiskZones, normalizeRainfallForecasts } from "@/lib/riskEngine";
 import { getLatest, getPrediction, getHistory } from "../lib/bahuraksha-api.ts";
 import {
   LineChart,
@@ -98,6 +105,24 @@ export default function Index() {
   const { data: stats } = useQuery({
     queryKey: ["dashboard-stats"],
     queryFn: fetchDashboardStats,
+  });
+  const { data: zones = [] } = useQuery({
+    queryKey: ["risk-zones"],
+    queryFn: fetchRiskZones,
+  });
+  const { data: stations = [] } = useQuery({
+    queryKey: ["river-stations"],
+    queryFn: fetchRiverStations,
+  });
+  const { data: rainfallRows = [] } = useQuery({
+    queryKey: ["rainfall-forecasts", "Bagmati Basin"],
+    queryFn: () => fetchRainfallForecasts("Bagmati Basin"),
+  });
+  const computedZones = computeCompositeRiskZones({
+    zones,
+    stations,
+    rainfall: normalizeRainfallForecasts(rainfallRows),
+    xgboostPrediction: prediction,
   });
 
   useEffect(() => {
@@ -279,6 +304,7 @@ export default function Index() {
         <motion.div variants={itemVariants} className="grid grid-cols-1 xl:grid-cols-3 gap-6">
           <div className="xl:col-span-2 space-y-6">
             <RiverLevelChart />
+            <RiskExplanationPanel zones={computedZones} />
             <ZoneRiskTable />
           </div>
           <div className="space-y-6">

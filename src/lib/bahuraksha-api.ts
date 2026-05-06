@@ -35,6 +35,20 @@ export interface HealthResponse {
   model_type: string;
 }
 
+export interface ReadyResponse {
+  status: "ready";
+  model_loaded: boolean;
+  feature_count: number;
+}
+
+export interface VersionResponse {
+  api_version: string;
+  model_path: string;
+  model_loaded: boolean;
+  xgboost_version: string;
+  feature_schema: string[];
+}
+
 // ── Config ────────────────────────────────────────────────────────────────────
 
 const API_BASE = "https://bahuraksha.onrender.com";
@@ -126,4 +140,12 @@ export async function getHistory(days: number = 7): Promise<HistoryResponse> {
  */
 export async function getHealth(): Promise<HealthResponse> {
   return apiFetch<HealthResponse>("/health");
+}
+
+export async function getReady(): Promise<ReadyResponse> {
+  return apiFetch<ReadyResponse>("/ready");
+}
+
+export async function getVersion(): Promise<VersionResponse> {
+  return apiFetch<VersionResponse>("/version");
 }

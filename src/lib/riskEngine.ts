@@ -37,7 +37,8 @@ export type CompositeRiskZone = LiveRiskZone & {
     landslide: number;
   };
   nearestStationName?: string;
-  dataQuality: "seeded" | "computed";
+  dataQuality: "low" | "medium" | "high";
+  explanation: string[];
 };
 
 const KATHMANDU_MONSOON_NORMAL_MM = [4, 5, 8, 18, 64, 236, 363, 331, 200, 51, 8, 3];
@@ -128,7 +129,9 @@ export function computeCompositeRiskZones(params: {
   xgboostPrediction?: PredictionResponse;
 }): CompositeRiskZone[] {
   const rainfallSummary = summarizeRainfall(params.rainfall);
+  const hasXgboost = Boolean(params.xgboostPrediction?.prediction);
   const xgboostRisk = clamp01((params.xgboostPrediction?.prediction.risk_score ?? 0) / 100);
+  const hasRainfallDb = params.rainfall.some((item) => item.source === "database");
 
   return params.zones.map((zone) => {
     const nearestStation = findNearestStation(zone, params.stations);
@@ -147,13 +150,30 @@ export function computeCompositeRiskZones(params: {
         landslideRainCoupling * 0.05,
     );
 
+    const computedRiskLevel = riskLevelFromScore(compositeScore);
+    const dataQuality = computeDataQuality({
+      hasRainfallDb,
+      hasStation: Boolean(nearestStation),
+      hasXgboost,
+      hasHecRas: hecRasRisk > 0,
+    });
+
     return {
       ...zone,
       computedFloodProb: compositeScore,
-      computedRiskLevel: riskLevelFromScore(compositeScore),
+      computedRiskLevel,
       compositeScore,
       nearestStationName: nearestStation?.name,
-      dataQuality: "computed",
+      dataQuality,
+      explanation: buildRiskExplanation({
+        zoneName: zone.name,
+        computedRiskLevel,
+        compositeScore,
+        rainfallSummary,
+        nearestStation,
+        xgboostRisk,
+        hecRasRisk,
+      }),
       drivers: {
         storedFlood: zone.floodProb,
         rainfall: rainfallSummary.riskScore,
@@ -166,6 +186,40 @@ export function computeCompositeRiskZones(params: {
   });
 }
 
+function computeDataQuality(input: {
+  hasRainfallDb: boolean;
+  hasStation: boolean;
+  hasXgboost: boolean;
+  hasHecRas: boolean;
+}): "low" | "medium" | "high" {
+  const score = [input.hasRainfallDb, input.hasStation, input.hasXgboost, input.hasHecRas].filter(
+    Boolean,
+  ).length;
+  if (score >= 4) return "high";
+  if (score >= 2) return "medium";
+  return "low";
+}
+
+function buildRiskExplanation(input: {
+  zoneName: string;
+  computedRiskLevel: RiskLevel;
+  compositeScore: number;
+  rainfallSummary: RainfallSummary;
+  nearestStation?: LiveRiverStation;
+  xgboostRisk: number;
+  hecRasRisk: number;
+}) {
+  const stationText = input.nearestStation
+    ? `${input.nearestStation.name} is at ${((input.nearestStation.currentLevel / input.nearestStation.dangerLevel) * 100).toFixed(0)}% of danger level.`
+    : "No nearby live station was available, reducing data quality.";
+
+  return [
+    `${input.zoneName} is classified ${input.computedRiskLevel} with composite score ${(input.compositeScore * 100).toFixed(0)}%.`,
+    `Rainfall peak is ${input.rainfallSummary.maxDailyMm.toFixed(1)}mm on ${input.rainfallSummary.peakDay} (${input.rainfallSummary.intensity}).`,
+    stationText,
+    `XGBoost satellite contribution is ${(input.xgboostRisk * 100).toFixed(0)}%; HEC-RAS contribution is ${(input.hecRasRisk * 100).toFixed(0)}%.`,
+  ];
+}
 function findNearestStation(zone: LiveRiskZone, stations: LiveRiverStation[]) {
   if (!stations.length) return undefined;
 
