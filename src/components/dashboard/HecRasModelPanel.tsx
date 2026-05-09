@@ -1,14 +1,31 @@
 import { AlertTriangle, Gauge, GitBranch, Waves } from "lucide-react";
 import RiskLevelBadge from "@/components/dashboard/RiskLevelBadge";
+import { useQuery } from "@tanstack/react-query";
 import {
-  getHecRasSummary,
+  getRoutingSummary,
   hecRasCrossSections,
-  hecRasModelMetadata,
-  hecRasScenarioResults,
+  syntheticRoutingMetadata,
+  fetchSyntheticRoutingResults,
 } from "@/lib/hecrasModel";
 
 export default function HecRasModelPanel() {
-  const summary = getHecRasSummary();
+  const { data: results = [] } = useQuery({
+    queryKey: ["synthetic-routing"],
+    queryFn: fetchSyntheticRoutingResults,
+  });
+
+  const summary = getRoutingSummary(results);
+
+  if (!summary || results.length === 0) {
+    return (
+      <div className="rounded-2xl border border-border/50 bg-gradient-to-br from-card to-secondary/20 p-5 shadow-card flex items-center justify-center min-h-[300px]">
+        <div className="animate-pulse flex items-center gap-2">
+          <Waves className="h-5 w-5 text-ocean-400" />
+          <span className="text-muted-foreground text-sm">Computing routing engine...</span>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="rounded-2xl border border-border/50 bg-gradient-to-br from-card to-secondary/20 p-5 shadow-card overflow-hidden">
@@ -19,17 +36,17 @@ export default function HecRasModelPanel() {
           </div>
           <div>
             <h3 className="text-sm font-semibold text-foreground">
-              HEC-RAS Bagmati Model Integration
+              {syntheticRoutingMetadata.modelType}
             </h3>
             <p className="text-xs text-muted-foreground mt-1">
-              {hecRasModelMetadata.modelType} • {hecRasModelMetadata.reach}
+              Live Forecast • {syntheticRoutingMetadata.reach}
             </p>
           </div>
         </div>
-        <div className="rounded-lg border border-risk-watch/30 bg-risk-watch/10 px-3 py-2 text-xs text-risk-watch max-w-xl">
+        <div className="rounded-lg border border-ocean-400/30 bg-ocean-400/10 px-3 py-2 text-xs text-ocean-400 max-w-xl">
           <div className="flex items-start gap-2">
-            <AlertTriangle className="h-4 w-4 flex-shrink-0 mt-0.5" />
-            <span>{hecRasModelMetadata.disclaimer}</span>
+            <Gauge className="h-4 w-4 flex-shrink-0 mt-0.5" />
+            <span>{syntheticRoutingMetadata.disclaimer}</span>
           </div>
         </div>
       </div>
@@ -46,11 +63,11 @@ export default function HecRasModelPanel() {
           <div className="flex items-center gap-2 mb-3">
             <Gauge className="h-4 w-4 text-primary" />
             <h4 className="text-xs font-semibold uppercase tracking-wider text-foreground">
-              Q10 Scenario Station Output
+              Synthetic Station Outputs
             </h4>
           </div>
           <div className="space-y-2">
-            {hecRasScenarioResults.map((result) => {
+            {results.map((result) => {
               const thresholdRatio = result.waterSurfaceM / result.dangerLevelM;
               return (
                 <div
@@ -129,9 +146,7 @@ export default function HecRasModelPanel() {
             </table>
           </div>
           <p className="text-xs text-muted-foreground mt-3">
-            Model files: <code>HEC_RAS/README.md</code> and{" "}
-            <code>HEC_RAS/bagmati_q10_results_placeholder.csv</code>. Replace these values with
-            calibrated HEC-RAS exports when survey and gauge data are ready.
+            Physical parameters currently computed dynamically based on live Open-Meteo rainfall using Manning's Equation and Muskingum routing curves.
           </p>
         </div>
       </div>

@@ -32,7 +32,7 @@ export default function RiverLevelChart() {
               River Level — Teku Station
             </h3>
             <p className="text-xs text-muted-foreground mt-0.5">
-              48-hour view • LSTM prediction after 24h mark
+              48-hour view • Synthetic Hydrological Routing from live rainfall
             </p>
           </div>
         </div>
