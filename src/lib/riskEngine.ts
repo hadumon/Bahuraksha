@@ -5,7 +5,7 @@ import type {
   RiskLevel,
 } from "@/lib/operationalData";
 import type { PredictionResponse } from "@/lib/bahuraksha-api";
-import { hecRasScenarioResults } from "@/lib/hecrasModel";
+import type { HecRasStationResult } from "@/lib/hecrasModel";
 
 export type RainfallRiskLevel = "light" | "moderate" | "heavy" | "extreme";
 
@@ -127,6 +127,7 @@ export function computeCompositeRiskZones(params: {
   stations: LiveRiverStation[];
   rainfall: RainfallForecastPoint[];
   xgboostPrediction?: PredictionResponse;
+  hecRasResults?: HecRasStationResult[];
 }): CompositeRiskZone[] {
   const rainfallSummary = summarizeRainfall(params.rainfall);
   const hasXgboost = Boolean(params.xgboostPrediction?.prediction);
@@ -138,7 +139,7 @@ export function computeCompositeRiskZones(params: {
     const stationRisk = nearestStation
       ? clamp01(nearestStation.currentLevel / nearestStation.dangerLevel)
       : 0;
-    const hecRasRisk = hecRasRiskForNearestStation(zone);
+    const hecRasRisk = hecRasRiskForNearestStation(zone, params.hecRasResults);
     const landslideRainCoupling = clamp01(zone.landslideProb * rainfallSummary.riskScore);
 
     const compositeScore = clamp01(
@@ -230,8 +231,8 @@ function findNearestStation(zone: LiveRiskZone, stations: LiveRiverStation[]) {
   });
 }
 
-function hecRasRiskForNearestStation(zone: LiveRiskZone) {
-  if (!hecRasScenarioResults.length) return 0;
+function hecRasRiskForNearestStation(zone: LiveRiskZone, hecRasScenarioResults?: HecRasStationResult[]) {
+  if (!hecRasScenarioResults || !hecRasScenarioResults.length) return 0;
 
   const nearest = hecRasScenarioResults.reduce((closest, result) => {
     const resultDistance = distanceKm(zone.coordinates, result.location);
