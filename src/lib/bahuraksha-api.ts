@@ -107,6 +107,7 @@ export async function getLatest(): Promise<PredictionResponse> {
     console.warn("API /latest timed out or failed, falling back to mock data.", error);
     return {
       status: "ok",
+      isMock: true,
       request: { date: new Date().toISOString().split("T")[0], bbox: [86.0, 27.7, 86.6, 28.1] },
       prediction: { class: 1, label: "flood_water", color: "#1a6faf", confidence: 0.89, risk_score: 82.5 }
     };

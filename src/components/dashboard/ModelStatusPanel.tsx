@@ -18,7 +18,8 @@ export default function ModelStatusPanel() {
     staleTime: 1000 * 60 * 10,
   });
 
-  const isHealthy = health.data?.model_loaded === true && !health.error;
+  const hasRealData = latest.data && !(latest.data as any).isMock;
+  const isHealthy = hasRealData || (health.data?.model_loaded === true && !health.error);
   const riskScore = latest.data?.prediction.risk_score;
 
   return (
@@ -68,7 +69,7 @@ export default function ModelStatusPanel() {
         </div>
       )}
 
-      {(health.error || latest.error) && (
+      {(health.error || latest.error) && !hasRealData && (
         <p className="mt-3 text-[11px] text-risk-warning">
           API note: the deployed model endpoint did not respond successfully. Check Render health,
           cold-start time, and installed Python dependencies.
