@@ -10,6 +10,7 @@ export interface Prediction {
 
 export interface PredictionResponse {
   status: "ok";
+  isMock?: boolean;
   request: {
     date: string;
     bbox: number[];
