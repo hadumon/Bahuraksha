@@ -102,15 +102,45 @@ export default function RiskMap({ className = "" }: { className?: string }) {
       overlaysRef.current = [];
 
       computedZones.forEach((zone) => {
-        const circle = L.circleMarker(zone.coordinates, {
-          radius: Math.max(8, Math.sqrt(zone.population) / 15),
-          fillColor: riskColors[zone.computedRiskLevel],
-          fillOpacity: 0.25,
-          color: riskColors[zone.computedRiskLevel],
-          weight: 2,
-        }).addTo(mapInstanceRef.current);
+        const riskLevel = zone.computedRiskLevel;
+        let gradientStyle = "";
+        
+        // Create the heat-map style gradient based on risk level
+        // Lowered opacities significantly so the map remains readable
+        if (riskLevel === "evacuate") {
+            // Intense red core -> orange -> yellow -> fade
+            gradientStyle = "background: radial-gradient(circle, rgba(239,68,68,0.7) 0%, rgba(249,115,22,0.4) 35%, rgba(234,179,8,0.15) 70%, transparent 100%);";
+        } else if (riskLevel === "warning") {
+            // Orange core -> yellow -> fade
+            gradientStyle = "background: radial-gradient(circle, rgba(249,115,22,0.6) 0%, rgba(234,179,8,0.3) 50%, transparent 100%);";
+        } else if (riskLevel === "watch") {
+            // Yellow core -> fade
+            gradientStyle = "background: radial-gradient(circle, rgba(234,179,8,0.5) 0%, rgba(234,179,8,0.15) 60%, transparent 100%);";
+        } else {
+            // Green core -> fade
+            gradientStyle = "background: radial-gradient(circle, rgba(34,197,94,0.4) 0%, rgba(34,197,94,0.1) 60%, transparent 100%);";
+        }
 
-        circle.bindPopup(
+        // Calculate a much smaller responsive radius based on population
+        const radius = Math.max(15, Math.sqrt(zone.population) / 15);
+
+        const customIcon = L.divIcon({
+          className: "risk-zone-gradient",
+          html: `<div style="
+            width: ${radius * 2}px; 
+            height: ${radius * 2}px; 
+            border-radius: 50%; 
+            ${gradientStyle}
+            pointer-events: none;
+            mix-blend-mode: screen;
+          "></div>`,
+          iconSize: [radius * 2, radius * 2],
+          iconAnchor: [radius, radius],
+        });
+
+        const marker = L.marker(zone.coordinates, { icon: customIcon }).addTo(mapInstanceRef.current);
+
+        marker.bindPopup(
           createPopupNode([
             [zone.name, true],
             [zone.district],
@@ -122,7 +152,7 @@ export default function RiskMap({ className = "" }: { className?: string }) {
           ]),
         );
 
-        overlaysRef.current.push(circle);
+        overlaysRef.current.push(marker);
       });
 
       stations.forEach((station) => {
@@ -172,8 +202,9 @@ export default function RiskMap({ className = "" }: { className?: string }) {
         const layer = L.geoJSON(product.footprintGeoJson as any, {
           style: {
             color: riskColors[product.riskLevel ?? "watch"],
-            weight: 2,
-            fillOpacity: 0.15,
+            weight: 1,
+            fillOpacity: 0.05,
+            dashArray: "4 4"
           },
         }).addTo(mapInstanceRef.current);
 

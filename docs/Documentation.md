@@ -58,6 +58,19 @@ A standout feature of the web dashboard is the real-time 3D Digital Twin of the 
 - **HTML/DOM Overlays**: Renders responsive UI tooltips perfectly synced into the 3D space (`<Html>` from Drei) over the sensor nodes, reflecting real-time live metrics and statuses without suffering from texture pixelation.
 - **Cinematic Experience**: Designed with atmospheric fog, dual-tone spot lighting, ambient occlusion (`ContactShadows`), particle systems (`Sparkles`), and a smooth, auto-rotating programmatic camera.
 
+### 3.5. Landslide Prediction UI (`LandslidesPage.tsx`)
+A dedicated dashboard interface for visualizing geospatial landslide susceptibility:
+- **Geospatial Metrics**: Displays top-level indicators for Soil Moisture, Slope Instability, and Seismic Activity.
+- **Correlation Chart**: Integrates a `recharts`-based interactive Area Chart to map Risk Probability against Soil Saturation levels over time.
+- **Susceptible Zones Feed**: Lists high-risk districts with interactive progress bars that directly correspond to calculated slope failure probability.
+
+### 3.6. Dynamic Heatmap Risk Map (`RiskMap.tsx`)
+The central map interface utilizes custom, mathematically scaled gradient markers to visualize danger zones:
+- **Radial CSS Gradients**: Employs native CSS `radial-gradient` via Leaflet's `divIcon` to create highly realistic heatmaps. Zones with an "evacuate" status emit an intense red core that fades out smoothly through orange and yellow.
+- **Screen Blend Modes**: Utilizes `mix-blend-mode: screen` on the markers so that overlapping danger zones visually compound and intensify in brightness.
+- **Population Scaling**: Danger zone radii are mathematically scaled based on the square root of the local population size, ensuring accurate representation without overwhelming the viewport.
+- **De-cluttered Overlays**: Satellite data footprints are rendered with low opacity and dashed borders to avoid obstructing the primary topological and heatmap data.
+
 ---
 
 ## 4. Development and Commands

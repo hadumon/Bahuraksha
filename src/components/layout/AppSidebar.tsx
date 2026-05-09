@@ -11,6 +11,7 @@ import {
   Shield,
   X,
   Snowflake,
+  Mountain,
 } from "lucide-react";
 import { useAuth } from "@/components/auth/useAuth";
 import { cn } from "@/lib/utils";
@@ -20,6 +21,7 @@ const navItems = [
   { path: "/risk-map", icon: Map, label: "Risk Map" },
   { path: "/monitoring", icon: Activity, label: "River Monitoring" },
   { path: "/glof", icon: Snowflake, label: "GLOF Monitoring" },
+  { path: "/landslides", icon: Mountain, label: "Landslide Prediction" },
   { path: "/alerts", icon: AlertTriangle, label: "Alerts" },
   { path: "/citizen-reports", icon: Users, label: "Citizen Reports" },
   { path: "/data-sources", icon: Database, label: "Data Sources" },

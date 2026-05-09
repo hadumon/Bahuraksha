@@ -23,6 +23,7 @@ const AboutPage = lazy(() => import("./pages/AboutPage"));
 const GlofPage = lazy(() => import("./pages/GlofPage"));
 const BlogPage = lazy(() => import("./pages/BlogPage"));
 const DisastersPage = lazy(() => import("./pages/DisastersPage"));
+const LandslidesPage = lazy(() => import("./pages/LandslidesPage"));
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -82,6 +83,7 @@ function AnimatedRoutes() {
       case "/data-sources": return <DataSourcesPage />;
       case "/about": return <AboutPage />;
       case "/glof": return <GlofPage />;
+      case "/landslides": return <LandslidesPage />;
       case "/blog": return <BlogPage />;
       case "/disasters": return <DisastersPage />;
       default: return null;
@@ -189,6 +191,14 @@ function AnimatedRoutes() {
               element={
                 <PageTransition>
                   <GlofPage />
+                </PageTransition>
+              }
+            />
+            <Route
+              path="/landslides"
+              element={
+                <PageTransition>
+                  <LandslidesPage />
                 </PageTransition>
               }
             />
