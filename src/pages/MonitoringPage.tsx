@@ -3,6 +3,7 @@ import AppLayout from "@/components/layout/AppLayout";
 import RiskLevelBadge from "@/components/dashboard/RiskLevelBadge";
 import RiverLevelChart from "@/components/dashboard/RiverLevelChart";
 import HecRasModelPanel from "@/components/dashboard/HecRasModelPanel";
+import DigitalTwinPanel from "@/components/flood/DigitalTwinPanel";
 import { fetchRiverStations } from "@/lib/operationalData";
 import { ArrowUp, ArrowDown, Minus } from "lucide-react";
 
@@ -66,6 +67,8 @@ export default function MonitoringPage() {
             );
           })}
         </div>
+
+        <DigitalTwinPanel stations={riverStations} />
 
         <RiverLevelChart />
 
