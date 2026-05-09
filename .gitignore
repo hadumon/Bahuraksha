@@ -122,3 +122,6 @@ vite.config.ts.timestamp-*
 *.local
 tmp/
 temp/
+
+# Bahuraksha Specific
+docs/explanation.md
