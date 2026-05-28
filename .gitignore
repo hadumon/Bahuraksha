@@ -125,3 +125,21 @@ temp/
 
 # Bahuraksha Specific
 docs/explanation.md
+
+# =========================
+# AGENTS / WORKSPACE CONFIG
+# =========================
+.agents/
+
+# =========================
+# ML PIPELINE ARTIFACTS
+# =========================
+ml-pipeline/models/*.joblib
+ml-pipeline/models/*.png
+ml-pipeline/models/*.json
+!ml-pipeline/models/.gitkeep
+ml-pipeline/data/*.csv
+!ml-pipeline/data/.gitkeep
+ml-pipeline/data/*.parquet
+ml-pipeline/reports/
+ml-pipeline/notebooks/*.ipynb

@@ -1,0 +1,141 @@
+{
+  "task": "landslide",
+  "data_file": "landslide_training.csv",
+  "selected_model": "xgboost",
+  "selected_threshold": 0.43,
+  "train_rows": 353,
+  "val_rows": 142,
+  "test_rows": 49,
+  "train_pos": 62,
+  "train_neg": 291,
+  "val": {
+    "split": "val",
+    "roc_auc": 0.9985977564102564,
+    "pr_auc": 0.9983367097258931,
+    "precision": 0.984375,
+    "recall": 0.984375,
+    "f1": 0.984375,
+    "confusion_matrix": {
+      "tn": 77,
+      "fp": 1,
+      "fn": 1,
+      "tp": 63
+    }
+  },
+  "test": {
+    "split": "test",
+    "roc_auc": 0.9874551971326165,
+    "pr_auc": 0.9820747520976354,
+    "precision": 1.0,
+    "recall": 0.8888888888888888,
+    "f1": 0.9411764705882353,
+    "confusion_matrix": {
+      "tn": 31,
+      "fp": 0,
+      "fn": 2,
+      "tp": 16
+    }
+  },
+  "baseline_logistic": {
+    "val": {
+      "split": "val",
+      "roc_auc": 0.9048477564102564,
+      "pr_auc": 0.9011723633836963,
+      "precision": 0.8153846153846154,
+      "recall": 0.828125,
+      "f1": 0.8217054263565892,
+      "confusion_matrix": {
+        "tn": 66,
+        "fp": 12,
+        "fn": 11,
+        "tp": 53
+      }
+    },
+    "test": {
+      "split": "test",
+      "roc_auc": 0.7992831541218638,
+      "pr_auc": 0.7153302329503702,
+      "precision": 0.5909090909090909,
+      "recall": 0.7222222222222222,
+      "f1": 0.65,
+      "confusion_matrix": {
+        "tn": 22,
+        "fp": 9,
+        "fn": 5,
+        "tp": 13
+      }
+    }
+  },
+  "baseline_xgboost": {
+    "val": {
+      "split": "val",
+      "roc_auc": 0.9985977564102564,
+      "pr_auc": 0.9983367097258931,
+      "precision": 0.984375,
+      "recall": 0.984375,
+      "f1": 0.984375,
+      "confusion_matrix": {
+        "tn": 77,
+        "fp": 1,
+        "fn": 1,
+        "tp": 63
+      }
+    },
+    "test": {
+      "split": "test",
+      "roc_auc": 0.9874551971326165,
+      "pr_auc": 0.9820747520976354,
+      "precision": 1.0,
+      "recall": 0.8888888888888888,
+      "f1": 0.9411764705882353,
+      "confusion_matrix": {
+        "tn": 31,
+        "fp": 0,
+        "fn": 2,
+        "tp": 16
+      }
+    }
+  },
+  "top_feature_importance": [
+    [
+      "rf_3day",
+      0.31071117520332336
+    ],
+    [
+      "rf_30day",
+      0.27541616559028625
+    ],
+    [
+      "lat",
+      0.06948821991682053
+    ],
+    [
+      "rf_7day",
+      0.06262031942605972
+    ],
+    [
+      "curvature",
+      0.05503108352422714
+    ],
+    [
+      "elevation_m",
+      0.04793090745806694
+    ],
+    [
+      "lon",
+      0.02969207987189293
+    ],
+    [
+      "aspect_deg",
+      0.029414286836981773
+    ],
+    [
+      "dist_drainage_m",
+      0.027221059426665306
+    ],
+    [
+      "month",
+      0.025981802493333817
+    ]
+  ]
+}
