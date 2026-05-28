@@ -1,0 +1,141 @@
+{
+  "task": "flood",
+  "data_file": "flood_training.csv",
+  "selected_model": "xgboost",
+  "selected_threshold": 0.3,
+  "train_rows": 256,
+  "val_rows": 70,
+  "test_rows": 47,
+  "train_pos": 35,
+  "train_neg": 221,
+  "val": {
+    "split": "val",
+    "roc_auc": 0.9962121212121212,
+    "pr_auc": 0.9930069930069929,
+    "precision": 1.0,
+    "recall": 0.9545454545454546,
+    "f1": 0.9767441860465117,
+    "confusion_matrix": {
+      "tn": 48,
+      "fp": 0,
+      "fn": 1,
+      "tp": 21
+    }
+  },
+  "test": {
+    "split": "test",
+    "roc_auc": 0.9939516129032259,
+    "pr_auc": 0.9891493055555556,
+    "precision": 0.8888888888888888,
+    "recall": 1.0,
+    "f1": 0.9411764705882353,
+    "confusion_matrix": {
+      "tn": 29,
+      "fp": 2,
+      "fn": 0,
+      "tp": 16
+    }
+  },
+  "baseline_logistic": {
+    "val": {
+      "split": "val",
+      "roc_auc": 0.9176136363636362,
+      "pr_auc": 0.822318899825148,
+      "precision": 0.7692307692307693,
+      "recall": 0.9090909090909091,
+      "f1": 0.8333333333333333,
+      "confusion_matrix": {
+        "tn": 42,
+        "fp": 6,
+        "fn": 2,
+        "tp": 20
+      }
+    },
+    "test": {
+      "split": "test",
+      "roc_auc": 0.8004032258064516,
+      "pr_auc": 0.6275115139493553,
+      "precision": 0.5833333333333334,
+      "recall": 0.4375,
+      "f1": 0.5,
+      "confusion_matrix": {
+        "tn": 26,
+        "fp": 5,
+        "fn": 9,
+        "tp": 7
+      }
+    }
+  },
+  "baseline_xgboost": {
+    "val": {
+      "split": "val",
+      "roc_auc": 0.9962121212121212,
+      "pr_auc": 0.9930069930069929,
+      "precision": 1.0,
+      "recall": 0.9545454545454546,
+      "f1": 0.9767441860465117,
+      "confusion_matrix": {
+        "tn": 48,
+        "fp": 0,
+        "fn": 1,
+        "tp": 21
+      }
+    },
+    "test": {
+      "split": "test",
+      "roc_auc": 0.9939516129032259,
+      "pr_auc": 0.9891493055555556,
+      "precision": 0.8888888888888888,
+      "recall": 1.0,
+      "f1": 0.9411764705882353,
+      "confusion_matrix": {
+        "tn": 29,
+        "fp": 2,
+        "fn": 0,
+        "tp": 16
+      }
+    }
+  },
+  "top_feature_importance": [
+    [
+      "rf_3day",
+      0.3154381513595581
+    ],
+    [
+      "rf_7day",
+      0.184158593416214
+    ],
+    [
+      "soil_moisture_index",
+      0.09115985780954361
+    ],
+    [
+      "day_of_year",
+      0.06495525687932968
+    ],
+    [
+      "elevation_m",
+      0.060464657843112946
+    ],
+    [
+      "curvature",
+      0.04781007766723633
+    ],
+    [
+      "lat",
+      0.04242844134569168
+    ],
+    [
+      "discharge_proxy",
+      0.040149200707674026
+    ],
+    [
+      "aspect_deg",
+      0.03653319180011749
+    ],
+    [
+      "rf_1day",
+      0.034414373338222504
+    ]
+  ]
+}
