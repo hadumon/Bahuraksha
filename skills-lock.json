@@ -1,0 +1,29 @@
+{
+  "version": 1,
+  "skills": {
+    "frontend-design": {
+      "source": "anthropics/claude-code",
+      "sourceType": "github",
+      "skillPath": "plugins/frontend-design/skills/frontend-design/SKILL.md",
+      "computedHash": "e8118284a6365753790d44bb2758a6032b3af27fa84696428d9233f2be0f4e78"
+    },
+    "llm-council": {
+      "source": "tenfoldmarc/llm-council-skill",
+      "sourceType": "github",
+      "skillPath": "SKILL.md",
+      "computedHash": "4f8e9698a03f493511a53a7e87648bca4928b68018cbd6d1dd317ce38464f663"
+    },
+    "use-my-browser": {
+      "source": "xixu-me/skills",
+      "sourceType": "github",
+      "skillPath": "skills/use-my-browser/SKILL.md",
+      "computedHash": "c8c56bdd40ef33bb1848b6e051eb156c3b523f7b89edb838719962155074548f"
+    },
+    "webapp-testing": {
+      "source": "vudovn/antigravity-kit",
+      "sourceType": "github",
+      "skillPath": ".agents/skills/webapp-testing/SKILL.md",
+      "computedHash": "b90d99ebc866e42415500e2a02fa5f4493b2f896d8cce78f842c7c079b30776d"
+    }
+  }
+}

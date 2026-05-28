@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { useEffect, useMemo } from "react";
 import { motion, type Variants } from "framer-motion";
 import {
   Activity,
@@ -9,6 +9,7 @@ import {
   Brain,
   Shield,
   Radio,
+  Mountain,
 } from "lucide-react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import AppLayout from "@/components/layout/AppLayout";
@@ -27,6 +28,7 @@ import ModelStatusPanel from "@/components/dashboard/ModelStatusPanel";
 import RiskExplanationPanel from "@/components/dashboard/RiskExplanationPanel";
 import { computeCompositeRiskZones, normalizeRainfallForecasts } from "@/lib/riskEngine";
 import { getLatest, getPrediction, getHistory } from "../lib/bahuraksha-api.ts";
+import { predictBatchLandslideRisk, checkApiHealth } from "@/lib/landslideModel";
 import {
   LineChart,
   Line,
@@ -73,6 +75,13 @@ const itemVariants: Variants = {
     },
   },
 };
+
+const LANDSLIDE_ZONES = [
+  { id: "dash-1", name: "Sindhupalchok", district: "Sindhupalchok", coordinates: [27.78, 85.85] as [number, number], slopeAngleDeg: 42, soilMoisturePct: 88, rainfall7DayMm: 320, rainfallTodayMm: 65, seismicActivityMg: 0.015, vegetationCoverPct: 25, elevationM: 1800, distanceToRoadKm: 0.3 },
+  { id: "dash-2", name: "Rasuwa", district: "Rasuwa", coordinates: [28.15, 85.35] as [number, number], slopeAngleDeg: 38, soilMoisturePct: 75, rainfall7DayMm: 210, rainfallTodayMm: 35, seismicActivityMg: 0.008, vegetationCoverPct: 45, elevationM: 2200, distanceToRoadKm: 0.8 },
+  { id: "dash-3", name: "Dolakha", district: "Dolakha", coordinates: [27.67, 86.18] as [number, number], slopeAngleDeg: 28, soilMoisturePct: 55, rainfall7DayMm: 120, rainfallTodayMm: 15, seismicActivityMg: 0.003, vegetationCoverPct: 65, elevationM: 1400, distanceToRoadKm: 2.5 },
+  { id: "dash-4", name: "Gorkha", district: "Gorkha", coordinates: [28.00, 84.63] as [number, number], slopeAngleDeg: 35, soilMoisturePct: 70, rainfall7DayMm: 180, rainfallTodayMm: 25, seismicActivityMg: 0.005, vegetationCoverPct: 50, elevationM: 1600, distanceToRoadKm: 1.2 },
+];
 
 export default function Index() {
   const queryClient = useQueryClient();
@@ -124,6 +133,28 @@ export default function Index() {
     rainfall: normalizeRainfallForecasts(rainfallRows),
     xgboostPrediction: prediction,
   });
+
+  const { data: landslideApiAvailable = false } = useQuery({
+    queryKey: ["landslide-api-health-dashboard"],
+    queryFn: checkApiHealth,
+    staleTime: 1000 * 60 * 5,
+    retry: 1,
+  });
+
+  const { data: landslidePredictions = [] } = useQuery({
+    queryKey: ["landslide-predictions-dashboard", landslideApiAvailable],
+    queryFn: () => predictBatchLandslideRisk(LANDSLIDE_ZONES),
+    staleTime: 1000 * 60 * 10,
+  });
+
+  const landslideStats = useMemo(() => {
+    if (!landslidePredictions.length) return { maxProb: 0, highRiskCount: 0, avgConfidence: 0, maxRiskLevel: "safe" as const };
+    const maxProb = Math.max(...landslidePredictions.map((p) => p.probability));
+    const highRiskCount = landslidePredictions.filter((p) => p.riskLevel === "evacuate" || p.riskLevel === "warning").length;
+    const avgConfidence = landslidePredictions.reduce((sum, p) => sum + p.confidence, 0) / landslidePredictions.length;
+    const maxRiskLevel = maxProb >= 0.78 ? "evacuate" : maxProb >= 0.58 ? "warning" : maxProb >= 0.32 ? "watch" : "safe";
+    return { maxProb, highRiskCount, avgConfidence, maxRiskLevel };
+  }, [landslidePredictions]);
 
   useEffect(() => {
     const channel = supabase
@@ -194,7 +225,7 @@ export default function Index() {
         {/* Stats row */}
         <motion.div
           variants={itemVariants}
-          className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4"
+          className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-7 gap-4"
         >
           <StatCard
             title="Active Alerts"
@@ -255,6 +286,14 @@ export default function Index() {
                   : "No data"
             }
           />
+          <StatCard
+            title="Landslide Risk"
+            value={landslideStats.maxRiskLevel === "safe" ? "Low" : landslideStats.maxRiskLevel.charAt(0).toUpperCase() + landslideStats.maxRiskLevel.slice(1)}
+            icon={Mountain}
+            variant={landslideStats.maxRiskLevel === "evacuate" ? "danger" : "default"}
+            subtitle={`${landslideStats.highRiskCount} zones elevated`}
+            trend={landslideStats.highRiskCount > 0 ? "up" : "neutral"}
+          />
         </motion.div>
 
         {/* Flood/Glacier Risk History Chart */}
@@ -298,6 +337,50 @@ export default function Index() {
           {isHistoryLoading && (
             <div className="text-xs text-muted-foreground mt-2">Loading history…</div>
           )}
+        </motion.div>
+
+        {/* Landslide Risk Overview */}
+        <motion.div
+          variants={itemVariants}
+          className="w-full bg-card rounded-xl p-4 border border-border/50 shadow-card"
+        >
+          <div className="flex items-center justify-between mb-3">
+            <h3 className="text-base font-semibold">Landslide Susceptibility (ML Model)</h3>
+            <span className={`text-xs px-2 py-0.5 rounded ${landslideApiAvailable ? "bg-emerald-500/20 text-emerald-400" : "bg-amber-500/20 text-amber-400"}`}>
+              {landslideApiAvailable ? "XGBoost Live" : "Fallback"}
+            </span>
+          </div>
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4">
+            {landslidePredictions.map((pred) => (
+              <div key={pred.id} className="p-3 rounded-lg border border-border bg-secondary/30">
+                <div className="flex items-center justify-between mb-2">
+                  <span className="text-sm font-medium text-foreground">{pred.name}</span>
+                  <span className={`text-[10px] uppercase font-bold px-1.5 py-0.5 rounded ${
+                    pred.riskLevel === "evacuate" ? "bg-red-500/20 text-red-500" :
+                    pred.riskLevel === "warning" ? "bg-amber-500/20 text-amber-500" :
+                    pred.riskLevel === "watch" ? "bg-emerald-500/20 text-emerald-500" :
+                    "bg-blue-400/20 text-blue-400"
+                  }`}>
+                    {pred.riskLevel}
+                  </span>
+                </div>
+                <div className="w-full h-1.5 bg-muted rounded-full overflow-hidden">
+                  <div
+                    className={`h-full rounded-full ${
+                      pred.riskLevel === "evacuate" ? "bg-red-500" :
+                      pred.riskLevel === "warning" ? "bg-amber-500" :
+                      pred.riskLevel === "watch" ? "bg-emerald-500" :
+                      "bg-blue-400"
+                    }`}
+                    style={{ width: `${pred.probability * 100}%` }}
+                  />
+                </div>
+                <p className="text-[10px] text-muted-foreground mt-1">
+                  {(pred.probability * 100).toFixed(0)}% · {pred.primaryDriver}
+                </p>
+              </div>
+            ))}
+          </div>
         </motion.div>
 
         {/* Main content grid */}

@@ -38,7 +38,7 @@ function Terrain({ waterLevel }: { waterLevel: number }) {
   return (
     <mesh ref={meshRef} geometry={geometry} rotation={[-Math.PI / 2, 0, 0]} receiveShadow castShadow>
       <meshStandardMaterial 
-        color="#1b2a1c" 
+        color="#1a2420" 
         roughness={0.9}
         metalness={0.1}
         bumpScale={0.2}
@@ -47,7 +47,7 @@ function Terrain({ waterLevel }: { waterLevel: number }) {
   );
 }
 
-// Cinematic refractive water component
+// Cinematic refractive water component — rich teal/emerald water
 function RiverWater({ targetLevel }: { targetLevel: number }) {
   const meshRef = useRef<THREE.Mesh>(null);
   
@@ -72,7 +72,7 @@ function RiverWater({ targetLevel }: { targetLevel: number }) {
       {/* High-fidelity physically based water transmission shader */}
       <MeshTransmissionMaterial 
         backside
-        color="#1ca3ec"
+        color="#0d9488"
         thickness={2}
         roughness={0.1}
         transmission={0.9}
@@ -141,30 +141,34 @@ export default function DigitalTwinPanel({ stations }: { stations: any[] }) {
     : 2.5;
 
   return (
-    <div className="gradient-card rounded-xl border border-border overflow-hidden relative shadow-2xl">
+    <div className="rounded-xl border border-border/50 overflow-hidden relative shadow-2xl station-card">
+      {/* Header overlay */}
       <div className="absolute top-4 left-4 z-10 p-4 bg-black/50 backdrop-blur-xl rounded-xl border border-white/10 pointer-events-none">
         <h3 className="text-white font-bold text-lg flex items-center gap-2">
-          <span className="w-2 h-2 rounded-full bg-blue-500 animate-pulse shadow-[0_0_10px_#3b82f6]"></span>
+          <span className="w-2 h-2 rounded-full bg-teal-400 animate-pulse shadow-[0_0_10px_#2dd4bf]"></span>
           Cinematic Digital Twin
         </h3>
-        <p className="text-xs text-blue-200/70 mt-1">Real-time PBR Visualization • Bagmati Basin</p>
+        <p className="text-xs text-teal-200/70 mt-1">Real-time PBR Visualization • Bagmati Basin</p>
       </div>
 
-      <div className="h-[550px] w-full bg-[#050914]">
+      <div className="h-[550px] w-full bg-[#060a08]">
         <Canvas shadows camera={{ position: [12, 10, 15], fov: 40 }}>
-          {/* Atmospheric Fog */}
-          <fog attach="fog" args={['#050914', 10, 40]} />
+          {/* Atmospheric Fog — warm dark green */}
+          <fog attach="fog" args={['#060a08', 10, 40]} />
           
-          <ambientLight intensity={0.2} />
+          <ambientLight intensity={0.25} color="#d4f5e9" />
           <directionalLight 
             castShadow 
             position={[10, 15, 10]} 
-            intensity={1.5} 
-            color="#e0f2fe"
+            intensity={1.8} 
+            color="#fef3c7"
             shadow-mapSize={[1024, 1024]}
             shadow-bias={-0.0001}
           />
-          <spotLight position={[-10, 10, -10]} intensity={2} color="#3b82f6" distance={50} angle={0.5} penumbra={1} />
+          {/* Warm amber spot instead of blue */}
+          <spotLight position={[-10, 10, -10]} intensity={2.5} color="#f59e0b" distance={50} angle={0.5} penumbra={1} />
+          {/* Teal fill light */}
+          <pointLight position={[5, 8, 5]} intensity={40} color="#14b8a6" distance={40} decay={2} />
           
           <Terrain waterLevel={avgLevel} />
           <RiverWater targetLevel={avgLevel} />
@@ -182,8 +186,8 @@ export default function DigitalTwinPanel({ stations }: { stations: any[] }) {
             );
           })}
           
-          {/* Cinematic details */}
-          <Sparkles count={150} scale={30} size={3} speed={0.2} opacity={0.4} color="#60a5fa" />
+          {/* Warm amber sparkles instead of blue */}
+          <Sparkles count={150} scale={30} size={3} speed={0.2} opacity={0.4} color="#fbbf24" />
           <ContactShadows position={[0, -2, 0]} opacity={0.5} scale={40} blur={2} far={10} />
           
           <CinematicCamera />
@@ -202,7 +206,7 @@ export default function DigitalTwinPanel({ stations }: { stations: any[] }) {
       
       <div className="p-3 bg-background border-t border-border flex justify-between items-center text-xs">
         <span className="text-muted-foreground tracking-wide">PBR SCENE RENDERED</span>
-        <span className="font-mono text-blue-400 bg-blue-400/10 px-2 py-1 rounded border border-blue-400/20 shadow-[0_0_10px_rgba(59,130,246,0.2)]">LIVE TELEMETRY ACTIVE</span>
+        <span className="font-mono text-teal-400 bg-teal-400/10 px-2 py-1 rounded border border-teal-400/20 shadow-[0_0_10px_rgba(45,212,191,0.2)]">LIVE TELEMETRY ACTIVE</span>
       </div>
     </div>
   );

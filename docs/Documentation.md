@@ -47,6 +47,7 @@ The early warning prediction pipeline works as follows:
    - **Change Detection**: Computes differences in indices (`dNDWI`, `dNDSI`, `dNDVI`) against a reference date (60 days prior).
 4. **Prediction**: Constructs a 16-element feature vector and feeds it into the XGBoost classifier.
 5. **Output generation**: Generates a risk score derived from the XGBoost flood probability prediction combined with the SAR (Synthetic Aperture Radar) signal strength. Returns a JSON payload containing the predicted class (dry land, flood water, or snow/glacier), confidence, and risk score.
+6. **Robustness & Fallbacks**: The frontend API client (`bahuraksha-api.ts`) implements a circuit-breaker pattern. If the Render-hosted model endpoint is down or cold-starting, it catches the error and returns a realistic "mock" payload flagged with `isMock: true`. This ensures the composite risk engine and dashboard remain functional even during temporary API outages.
 
 ### 3.3. Background Ingestion Tasks
 - **Satellite Data Ingestion**: Node.js scripts (`scripts/ingest-satellite.mjs`, `scripts/ingest-rainfall.mjs`) run on a schedule to fetch metadata from STAC and write it into the Supabase database (`public.sentinel_scenes`). This ensures the database is continually updated with references to the latest satellite passes.
@@ -64,7 +65,14 @@ A dedicated dashboard interface for visualizing geospatial landslide susceptibil
 - **Correlation Chart**: Integrates a `recharts`-based interactive Area Chart to map Risk Probability against Soil Saturation levels over time.
 - **Susceptible Zones Feed**: Lists high-risk districts with interactive progress bars that directly correspond to calculated slope failure probability.
 
-### 3.6. Dynamic Heatmap Risk Map (`RiskMap.tsx`)
+### 3.7. Synthetic Hydrological Routing (HEC-RAS Proxy)
+To provide depth-based risk metrics without the high cost of manual channel surveys, the app implements a physical routing engine:
+- **Manning's Equation Logic**: Calculates water depth and velocity at specific cross-sections (Sundarijal, Pashupati, Teku, Chovar) using bed slope, channel width, and Manning's roughness coefficients.
+- **Dynamic Inputs**: Uses live rainfall forecasts from Open-Meteo as the primary inflow driver, routed through the catchment using the Rational Method.
+- **Risk Thresholds**: Categorizes results into Watch, Warning, and Evacuate based on calculated water surface elevation relative to local danger marks.
+- **Station Metadata**: Cross-sections include technical attributes like `leftOverbankN`, `channelN`, and `bankfullWidthM` for high-fidelity simulation.
+
+### 3.8. Dynamic Heatmap Risk Map (`RiskMap.tsx`)
 The central map interface utilizes custom, mathematically scaled gradient markers to visualize danger zones:
 - **Radial CSS Gradients**: Employs native CSS `radial-gradient` via Leaflet's `divIcon` to create highly realistic heatmaps. Zones with an "evacuate" status emit an intense red core that fades out smoothly through orange and yellow.
 - **Screen Blend Modes**: Utilizes `mix-blend-mode: screen` on the markers so that overlapping danger zones visually compound and intensify in brightness.

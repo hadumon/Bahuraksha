@@ -8,121 +8,133 @@
 @layer base {
   :root {
     /* Light Theme - Bahuraksha */
-    --background: 0 0% 100%;
-    --foreground: 222 47% 11%;
+    --background: 210 20% 98%;
+    --foreground: 220 30% 10%;
 
     --card: 0 0% 100%;
-    --card-foreground: 222 47% 11%;
+    --card-foreground: 220 30% 10%;
 
     --popover: 0 0% 100%;
-    --popover-foreground: 222 47% 11%;
+    --popover-foreground: 220 30% 10%;
 
-    --primary: 187 85% 45%;
+    /* Primary: rich teal */
+    --primary: 172 66% 42%;
     --primary-foreground: 0 0% 100%;
 
-    --secondary: 210 40% 96%;
-    --secondary-foreground: 222 47% 11%;
+    --secondary: 210 15% 95%;
+    --secondary-foreground: 220 30% 10%;
 
-    --muted: 210 40% 96%;
+    --muted: 210 15% 94%;
     --muted-foreground: 215 16% 47%;
 
-    --accent: 174 72% 40%;
+    /* Accent: amber warmth */
+    --accent: 35 85% 50%;
     --accent-foreground: 0 0% 100%;
 
-    --destructive: 0 84% 60%;
+    --destructive: 5 85% 55%;
     --destructive-foreground: 0 0% 100%;
 
-    --border: 214 32% 91%;
-    --input: 214 32% 91%;
-    --ring: 187 85% 45%;
+    --border: 210 15% 90%;
+    --input: 210 15% 90%;
+    --ring: 172 66% 42%;
 
     --radius: 0.75rem;
 
     /* Risk Level Colors */
-    --risk-safe: 160 84% 39%;
-    --risk-watch: 45 100% 45%;
-    --risk-warning: 25 95% 53%;
-    --risk-evacuate: 0 84% 60%;
+    --risk-safe: 152 70% 38%;
+    --risk-watch: 42 95% 48%;
+    --risk-warning: 22 88% 48%;
+    --risk-evacuate: 5 85% 55%;
 
-    /* Glass morphism gradients */
-    --gradient-primary: linear-gradient(135deg, hsl(187, 85%, 45%), hsl(174, 72%, 40%));
-    --gradient-danger: linear-gradient(135deg, hsl(0, 84%, 60%), hsl(25, 95%, 53%));
-    --gradient-safe: linear-gradient(135deg, hsl(160, 84%, 39%), hsl(145, 70%, 45%));
-    --gradient-card: linear-gradient(180deg, hsl(0, 0%, 100%), hsl(210, 40%, 98%));
-    --gradient-glow: radial-gradient(circle at center, hsl(187, 85%, 45%, 0.1) 0%, transparent 70%);
+    /* Storm gradients — teal + amber, no flat blue */
+    --gradient-primary: linear-gradient(135deg, hsl(172, 66%, 42%), hsl(160, 60%, 35%));
+    --gradient-danger: linear-gradient(135deg, hsl(5, 85%, 55%), hsl(22, 88%, 48%));
+    --gradient-safe: linear-gradient(135deg, hsl(152, 70%, 38%), hsl(140, 55%, 35%));
+    --gradient-card: linear-gradient(180deg, hsl(0, 0%, 100%), hsl(210, 15%, 97%));
+    --gradient-glow: radial-gradient(circle at center, hsl(172, 66%, 42%, 0.08) 0%, transparent 70%);
+    --gradient-storm: linear-gradient(135deg, hsl(210, 20%, 96%) 0%, hsl(200, 25%, 94%) 50%, hsl(180, 20%, 96%) 100%);
+    --gradient-ember: linear-gradient(135deg, hsl(35, 85%, 50%), hsl(15, 80%, 45%));
 
-    --shadow-glow-primary: 0 0 20px hsl(187 85% 45% / 0.15), 0 0 40px hsl(187 85% 45% / 0.05);
-    --shadow-glow-danger: 0 0 20px hsl(0 84% 60% / 0.2), 0 0 40px hsl(0 84% 60% / 0.1);
-    --shadow-glow-safe: 0 0 20px hsl(160 84% 39% / 0.15), 0 0 40px hsl(160 84% 39% / 0.05);
+    --shadow-glow-primary: 0 0 20px hsl(172 66% 42% / 0.12), 0 0 40px hsl(172 66% 42% / 0.04);
+    --shadow-glow-danger: 0 0 20px hsl(5 85% 55% / 0.18), 0 0 40px hsl(5 85% 55% / 0.08);
+    --shadow-glow-safe: 0 0 20px hsl(152 70% 38% / 0.12), 0 0 40px hsl(152 70% 38% / 0.04);
+    --shadow-glow-amber: 0 0 20px hsl(35 85% 50% / 0.12), 0 0 40px hsl(35 85% 50% / 0.04);
     --shadow-card: 0 8px 30px rgba(0,0,0,0.04);
     --shadow-elevated: 0 20px 40px -10px rgba(0,0,0,0.08);
 
     /* Sidebar */
-    --sidebar-background: 0 0% 98%;
-    --sidebar-foreground: 222 47% 11%;
-    --sidebar-primary: 187 85% 45%;
+    --sidebar-background: 210 20% 97%;
+    --sidebar-foreground: 220 30% 10%;
+    --sidebar-primary: 172 66% 42%;
     --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 210 40% 96%;
-    --sidebar-accent-foreground: 222 47% 11%;
-    --sidebar-border: 214 32% 91%;
-    --sidebar-ring: 187 85% 45%;
+    --sidebar-accent: 210 15% 95%;
+    --sidebar-accent-foreground: 220 30% 10%;
+    --sidebar-border: 210 15% 90%;
+    --sidebar-ring: 172 66% 42%;
   }
 
   .dark {
-    /* Deep Ocean Theme - Bahuraksha */
-    --background: 222 47% 7%;
-    --foreground: 210 40% 96%;
+    /* Storm Command Center Theme - Bahuraksha */
+    --background: 220 30% 6%;
+    --foreground: 210 30% 97%;
 
-    --card: 222 45% 9%;
-    --card-foreground: 210 40% 96%;
+    --card: 220 28% 9%;
+    --card-foreground: 210 30% 97%;
 
-    --popover: 222 45% 9%;
-    --popover-foreground: 210 40% 96%;
+    --popover: 220 28% 9%;
+    --popover-foreground: 210 30% 97%;
 
-    --primary: 187 85% 52%;
-    --primary-foreground: 222 47% 7%;
+    /* Primary: rich teal instead of cyan */
+    --primary: 172 66% 50%;
+    --primary-foreground: 220 30% 6%;
 
-    --secondary: 217 33% 14%;
-    --secondary-foreground: 210 40% 90%;
+    /* Secondary: warm slate */
+    --secondary: 220 20% 14%;
+    --secondary-foreground: 210 30% 90%;
 
-    --muted: 217 30% 12%;
-    --muted-foreground: 215 20% 55%;
+    --muted: 220 20% 12%;
+    --muted-foreground: 215 18% 58%;
 
-    --accent: 174 72% 45%;
-    --accent-foreground: 222 47% 7%;
+    /* Accent: amber warmth */
+    --accent: 35 85% 55%;
+    --accent-foreground: 220 30% 6%;
 
-    --destructive: 12 90% 55%;
-    --destructive-foreground: 210 40% 96%;
+    --destructive: 5 85% 58%;
+    --destructive-foreground: 210 30% 97%;
 
-    --border: 217 30% 18%;
-    --input: 217 30% 18%;
-    --ring: 187 85% 52%;
+    --border: 220 20% 18%;
+    --input: 220 20% 18%;
+    --ring: 172 66% 50%;
 
-    --risk-safe: 160 84% 45%;
-    --risk-watch: 45 100% 55%;
-    --risk-warning: 25 95% 55%;
-    --risk-evacuate: 0 85% 60%;
+    --risk-safe: 152 70% 45%;
+    --risk-watch: 42 95% 55%;
+    --risk-warning: 22 88% 52%;
+    --risk-evacuate: 5 85% 58%;
 
-    --gradient-primary: linear-gradient(135deg, hsl(187, 85%, 52%), hsl(174, 72%, 45%));
-    --gradient-danger: linear-gradient(135deg, hsl(0, 85%, 60%), hsl(25, 95%, 55%));
-    --gradient-safe: linear-gradient(135deg, hsl(160, 84%, 45%), hsl(145, 70%, 50%));
-    --gradient-card: linear-gradient(180deg, hsl(222, 45%, 11%), hsl(222, 45%, 8%));
-    --gradient-glow: radial-gradient(circle at center, hsl(187, 85%, 52%, 0.15) 0%, transparent 70%);
+    /* Storm gradients — teal + amber, no flat blue */
+    --gradient-primary: linear-gradient(135deg, hsl(172, 66%, 50%), hsl(160, 60%, 42%));
+    --gradient-danger: linear-gradient(135deg, hsl(5, 85%, 58%), hsl(22, 88%, 52%));
+    --gradient-safe: linear-gradient(135deg, hsl(152, 70%, 45%), hsl(140, 55%, 40%));
+    --gradient-card: linear-gradient(180deg, hsl(220, 28%, 11%), hsl(220, 30%, 7%));
+    --gradient-glow: radial-gradient(circle at center, hsl(172, 66%, 50%, 0.12) 0%, transparent 70%);
+    --gradient-storm: linear-gradient(135deg, hsl(220, 30%, 8%) 0%, hsl(200, 40%, 12%) 50%, hsl(180, 35%, 10%) 100%);
+    --gradient-ember: linear-gradient(135deg, hsl(35, 85%, 55%), hsl(15, 80%, 50%));
 
-    --shadow-glow-primary: 0 0 30px hsl(187 85% 52% / 0.2), 0 0 60px hsl(187 85% 52% / 0.1);
-    --shadow-glow-danger: 0 0 30px hsl(0 85% 60% / 0.25), 0 0 60px hsl(0 85% 60% / 0.1);
-    --shadow-glow-safe: 0 0 30px hsl(160 84% 45% / 0.2), 0 0 60px hsl(160 84% 45% / 0.1);
-    --shadow-card: 0 8px 32px hsl(0 0% 0% / 0.4);
-    --shadow-elevated: 0 25px 50px -12px hsl(0 0% 0% / 0.5);
+    --shadow-glow-primary: 0 0 30px hsl(172 66% 50% / 0.2), 0 0 60px hsl(172 66% 50% / 0.08);
+    --shadow-glow-danger: 0 0 30px hsl(5 85% 58% / 0.25), 0 0 60px hsl(5 85% 58% / 0.1);
+    --shadow-glow-safe: 0 0 30px hsl(152 70% 45% / 0.2), 0 0 60px hsl(152 70% 45% / 0.08);
+    --shadow-glow-amber: 0 0 30px hsl(35 85% 55% / 0.2), 0 0 60px hsl(35 85% 55% / 0.08);
+    --shadow-card: 0 8px 32px hsl(0 0% 0% / 0.5);
+    --shadow-elevated: 0 25px 50px -12px hsl(0 0% 0% / 0.6);
 
-    --sidebar-background: 222 47% 5%;
-    --sidebar-foreground: 210 30% 75%;
-    --sidebar-primary: 187 85% 52%;
-    --sidebar-primary-foreground: 222 47% 7%;
-    --sidebar-accent: 217 33% 16%;
-    --sidebar-accent-foreground: 210 40% 90%;
-    --sidebar-border: 217 30% 14%;
-    --sidebar-ring: 187 85% 52%;
+    --sidebar-background: 220 30% 4%;
+    --sidebar-foreground: 210 25% 78%;
+    --sidebar-primary: 172 66% 50%;
+    --sidebar-primary-foreground: 220 30% 6%;
+    --sidebar-accent: 220 20% 14%;
+    --sidebar-accent-foreground: 210 30% 90%;
+    --sidebar-border: 220 20% 14%;
+    --sidebar-ring: 172 66% 50%;
   }
 }
 
@@ -167,6 +179,26 @@
   .bg-risk-watch { background-color: hsl(var(--risk-watch)); }
   .bg-risk-warning { background-color: hsl(var(--risk-warning)); }
   .bg-risk-evacuate { background-color: hsl(var(--risk-evacuate)); }
+
+  /* Flood status colors — map to risk palette */
+  .text-flood-safe { color: hsl(var(--risk-safe)); }
+  .text-flood-warn { color: hsl(var(--risk-watch)); }
+  .text-flood-danger { color: hsl(var(--risk-evacuate)); }
+  .bg-flood-safe { background-color: hsl(var(--risk-safe)); }
+  .bg-flood-warn { background-color: hsl(var(--risk-watch)); }
+  .bg-flood-danger { background-color: hsl(var(--risk-evacuate)); }
+
+  /* Flood CSS custom properties for inline styles */
+  :root {
+    --flood-safe: hsl(var(--risk-safe));
+    --flood-warn: hsl(var(--risk-watch));
+    --flood-danger: hsl(var(--risk-evacuate));
+  }
+  .dark {
+    --flood-safe: hsl(var(--risk-safe));
+    --flood-warn: hsl(var(--risk-watch));
+    --flood-danger: hsl(var(--risk-evacuate));
+  }
 
   /* Gradient Utilities */
   .gradient-primary { background: var(--gradient-primary); }
@@ -218,11 +250,20 @@
 
   @keyframes glow {
     from {
-      box-shadow: 0 0 20px hsl(187 85% 52% / 0.2);
+      box-shadow: 0 0 20px hsl(var(--primary) / 0.2);
     }
     to {
-      box-shadow: 0 0 40px hsl(187 85% 52% / 0.4), 0 0 60px hsl(187 85% 52% / 0.2);
+      box-shadow: 0 0 40px hsl(var(--primary) / 0.4), 0 0 60px hsl(var(--primary) / 0.2);
     }
+  }
+
+  /* Pulse dot for live indicators */
+  .pulse-dot {
+    animation: pulse-dot 2s ease-in-out infinite;
+  }
+  @keyframes pulse-dot {
+    0%, 100% { opacity: 1; transform: scale(1); }
+    50% { opacity: 0.5; transform: scale(1.5); }
   }
 
   /* Shine Effect */
@@ -256,5 +297,149 @@
   .hover-lift:hover {
     transform: translateY(-4px);
     box-shadow: var(--shadow-elevated);
+  }
+
+  /* ── Flood Page Enhancements ── */
+
+  /* Animated storm background gradient */
+  .bg-storm {
+    background: var(--gradient-storm);
+  }
+
+  /* Ember accent gradient */
+  .bg-ember {
+    background: var(--gradient-ember);
+  }
+
+  /* Station card with layered glow border */
+  .station-card {
+    position: relative;
+    background: var(--gradient-card);
+    border: 1px solid hsl(var(--border));
+    border-radius: 1rem;
+    overflow: hidden;
+    transition: transform 0.3s ease, box-shadow 0.3s ease, border-color 0.3s ease;
+  }
+  .station-card::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    padding: 1px;
+    background: linear-gradient(135deg, hsl(var(--primary) / 0.3), transparent 50%, hsl(var(--accent) / 0.15));
+    -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+    mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+    -webkit-mask-composite: xor;
+    mask-composite: exclude;
+    pointer-events: none;
+    opacity: 0;
+    transition: opacity 0.3s ease;
+  }
+  .station-card:hover {
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-elevated), var(--shadow-glow-primary);
+    border-color: hsl(var(--primary) / 0.3);
+  }
+  .station-card:hover::before {
+    opacity: 1;
+  }
+
+  /* Section header with gradient underline */
+  .section-header {
+    position: relative;
+    padding-bottom: 0.75rem;
+  }
+  .section-header::after {
+    content: '';
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    width: 60px;
+    height: 2px;
+    background: var(--gradient-primary);
+    border-radius: 1px;
+  }
+
+  /* Ambient pulse ring */
+  .pulse-ring {
+    position: relative;
+  }
+  .pulse-ring::after {
+    content: '';
+    position: absolute;
+    inset: -4px;
+    border-radius: inherit;
+    border: 2px solid hsl(var(--primary) / 0.2);
+    animation: pulse-ring-anim 2s ease-out infinite;
+  }
+  @keyframes pulse-ring-anim {
+    0% { transform: scale(1); opacity: 0.6; }
+    100% { transform: scale(1.3); opacity: 0; }
+  }
+
+  /* Data panel with frosted glass */
+  .data-panel {
+    background: hsl(var(--card) / 0.8);
+    backdrop-filter: blur(16px);
+    border: 1px solid hsl(var(--border) / 0.6);
+    border-radius: 1rem;
+  }
+
+  /* Metric badge */
+  .metric-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.375rem;
+    padding: 0.25rem 0.625rem;
+    border-radius: 9999px;
+    font-size: 0.6875rem;
+    font-weight: 600;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+    background: hsl(var(--primary) / 0.1);
+    color: hsl(var(--primary));
+    border: 1px solid hsl(var(--primary) / 0.2);
+  }
+
+  /* Subtle animated grain overlay */
+  .grain-overlay {
+    position: relative;
+  }
+  .grain-overlay::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    opacity: 0.015;
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)'/%3E%3C/svg%3E");
+    pointer-events: none;
+    border-radius: inherit;
+  }
+
+  /* Glow dot for live indicators */
+  .glow-dot-safe {
+    box-shadow: 0 0 8px hsl(var(--risk-safe) / 0.5), 0 0 16px hsl(var(--risk-safe) / 0.2);
+  }
+  .glow-dot-warning {
+    box-shadow: 0 0 8px hsl(var(--risk-warning) / 0.5), 0 0 16px hsl(var(--risk-warning) / 0.2);
+  }
+  .glow-dot-danger {
+    box-shadow: 0 0 8px hsl(var(--risk-evacuate) / 0.5), 0 0 16px hsl(var(--risk-evacuate) / 0.2);
+  }
+  .glow-dot-primary {
+    box-shadow: 0 0 8px hsl(var(--primary) / 0.5), 0 0 16px hsl(var(--primary) / 0.2);
+  }
+  .glow-dot-amber {
+    box-shadow: 0 0 8px hsl(var(--accent) / 0.5), 0 0 16px hsl(var(--accent) / 0.2);
+  }
+
+  /* Shimmer line for loading states */
+  .shimmer-line {
+    background: linear-gradient(90deg, hsl(var(--muted)) 25%, hsl(var(--muted) / 0.5) 50%, hsl(var(--muted)) 75%);
+    background-size: 200% 100%;
+    animation: shimmer 1.5s ease-in-out infinite;
+  }
+  @keyframes shimmer {
+    0% { background-position: 200% 0; }
+    100% { background-position: -200% 0; }
   }
 }

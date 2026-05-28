@@ -135,3 +135,8 @@ ml-pipeline/data/*.csv
 ml-pipeline/data/*.parquet
 ml-pipeline/reports/
 ml-pipeline/notebooks/*.ipynb
+
+# =========================
+# BAHURAKSHA-API DATA
+# =========================
+bahuraksha-api/data/

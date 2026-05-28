@@ -1,27 +1,13 @@
-"""
-config.py — single source of truth for all paths and parameters.
-Every other script imports from here. Change a path once, it updates everywhere.
-"""
-
 from pathlib import Path
 
-# ─── Project root ────────────────────────────────────────────────────────────
-ROOT = Path(__file__).parent
+ROOT = Path(__file__).resolve().parent
 
-# ─── Data directories ────────────────────────────────────────────────────────
-DATA_RAW        = ROOT / "data" / "raw"
-DATA_PROCESSED  = ROOT / "data" / "processed"
-DATA_TRAINING   = ROOT / "data" / "training"
-MODELS_DIR      = ROOT / "models"
-
-RAW_BIPAD       = DATA_RAW / "bipad"
-RAW_DEM         = DATA_RAW / "dem"
-RAW_RAINFALL    = DATA_RAW / "rainfall"
-RAW_DISCHARGE   = DATA_RAW / "discharge"
-RAW_LANDUSE     = DATA_RAW / "landuse"
-RAW_SENTINEL    = DATA_RAW / "sentinel"
-RAW_BOUNDARY    = DATA_RAW / "boundary"
-BASIN_BOUNDARY_GEOJSON = RAW_BOUNDARY / "bagmatibasin.geojson"
+MODELS_DIR = ROOT / "models"
+RAW_RAINFALL = ROOT / "data" / "raw" / "rainfall"
+RAW_DISCHARGE = ROOT / "data" / "raw" / "discharge"
+RAW_SENTINEL = ROOT / "data" / "raw" / "sentinel"
+RAW_DEM = ROOT / "data" / "raw" / "dem"
+RAW_LANDUSE = ROOT / "data" / "raw" / "landuse"
 
 # ─── Bagmati Basin bounding box ──────────────────────────────────────────────
 # Covers Kathmandu Valley + Sindhupalchok upper catchment

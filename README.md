@@ -24,11 +24,13 @@ The app starts at `http://localhost:8080`.
 ```bash
 npm run build
 npm run preview
-npm run test
-npm run e2e
-npm run test:all
-npm run playwright:install
+npm run test            # Run unit tests (Vitest)
+npm run test:watch      # Watch mode for unit tests
+npm run e2e             # Run Playwright E2E tests
+npm run test:all        # Run unit + E2E tests
+npm run playwright:install  # Install Playwright browsers
 npm run ingest:satellite
+npm run ingest:rainfall
 ```
 
 ## End-to-end testing

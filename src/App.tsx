@@ -5,10 +5,12 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { AuthProvider } from "@/components/auth/AuthContext";
 import ProtectedRoute from "@/components/auth/ProtectedRoute";
 import { ThemeProvider } from "@/components/theme/ThemeProvider";
+import { ErrorBoundary } from "@/components/ErrorBoundary";
+import PageErrorBoundary from "@/components/PageErrorBoundary";
+import PageSkeleton from "@/components/PageSkeleton";
 import { AnimatePresence, motion } from "framer-motion";
 import NotFound from "./pages/NotFound";
 import { Suspense, lazy } from "react";
-import { Loader2 } from "lucide-react";
 
 // Lazy load pages for better performance
 const LandingPage = lazy(() => import("./pages/LandingPage"));
@@ -24,6 +26,7 @@ const GlofPage = lazy(() => import("./pages/GlofPage"));
 const BlogPage = lazy(() => import("./pages/BlogPage"));
 const DisastersPage = lazy(() => import("./pages/DisastersPage"));
 const LandslidesPage = lazy(() => import("./pages/LandslidesPage"));
+const AdminUsersPage = lazy(() => import("./pages/AdminUsersPage"));
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -35,16 +38,14 @@ const queryClient = new QueryClient({
   },
 });
 
-// Loading fallback component
-function PageLoader() {
-  return (
-    <div className="min-h-screen flex items-center justify-center bg-background">
-      <div className="flex flex-col items-center gap-4">
-        <Loader2 className="h-8 w-8 animate-spin text-ocean-400" />
-        <p className="text-sm text-muted-foreground">Loading...</p>
-      </div>
-    </div>
-  );
+function skeletonVariant(path: string) {
+  if (path.startsWith("/admin")) return "list";
+  if (path.startsWith("/dashboard")) return "dashboard";
+  if (path.startsWith("/risk-map")) return "map";
+  if (path.startsWith("/monitoring")) return "detail";
+  if (path.startsWith("/citizen-reports")) return "list";
+  if (path.startsWith("/data-sources")) return "list";
+  return "default";
 }
 
 // Page transition wrapper
@@ -91,152 +92,218 @@ function AnimatedRoutes() {
   };
 
   return (
-    <Suspense fallback={<PageLoader />}>
-      <AnimatePresence mode="wait">
-        <Routes location={location} key={location.pathname}>
-          {/* Public Routes */}
-          <Route
-            path="/"
-            element={
-              <PageTransition>
-                <LandingPage />
-              </PageTransition>
-            }
-          />
-          <Route
-            path="/login"
-            element={
-              <PageTransition>
-                <LoginPage />
-              </PageTransition>
-            }
-          />
-          <Route
-            path="/blog"
-            element={
-              <PageTransition>
-                <BlogPage />
-              </PageTransition>
-            }
-          />
-          <Route
-            path="/disasters"
-            element={
-              <PageTransition>
-                <DisastersPage />
-              </PageTransition>
-            }
-          />
+    <AnimatePresence mode="wait">
+      <Routes location={location} key={location.pathname}>
+        {/* Public Routes */}
+        <Route
+          path="/"
+          element={
+            <PageErrorBoundary pageName="Home">
+              <Suspense fallback={<PageSkeleton variant="default" />}>
+                <PageTransition>
+                  <LandingPage />
+                </PageTransition>
+              </Suspense>
+            </PageErrorBoundary>
+          }
+        />
+        <Route
+          path="/login"
+          element={
+            <PageErrorBoundary pageName="Login">
+              <Suspense fallback={<PageSkeleton variant="default" />}>
+                <PageTransition>
+                  <LoginPage />
+                </PageTransition>
+              </Suspense>
+            </PageErrorBoundary>
+          }
+        />
+        <Route
+          path="/blog"
+          element={
+            <PageErrorBoundary pageName="Blog">
+              <Suspense fallback={<PageSkeleton variant="list" />}>
+                <PageTransition>
+                  <BlogPage />
+                </PageTransition>
+              </Suspense>
+            </PageErrorBoundary>
+          }
+        />
+        <Route
+          path="/disasters"
+          element={
+            <PageErrorBoundary pageName="Disasters">
+              <Suspense fallback={<PageSkeleton variant="list" />}>
+                <PageTransition>
+                  <DisastersPage />
+                </PageTransition>
+              </Suspense>
+            </PageErrorBoundary>
+          }
+        />
 
-          {/* Protected Routes */}
-          <Route element={<ProtectedRoute />}>
-            <Route
-              path="/dashboard"
-              element={
-                <PageTransition>
-                  <Index />
-                </PageTransition>
-              }
-            />
-            <Route
-              path="/risk-map"
-              element={
-                <PageTransition>
-                  <RiskMapPage />
-                </PageTransition>
-              }
-            />
-            <Route
-              path="/monitoring"
-              element={
-                <PageTransition>
-                  <MonitoringPage />
-                </PageTransition>
-              }
-            />
-            <Route
-              path="/alerts"
-              element={
-                <PageTransition>
-                  <AlertsPage />
-                </PageTransition>
-              }
-            />
-            <Route
-              path="/citizen-reports"
-              element={
-                <PageTransition>
-                  <CitizenReportsPage />
-                </PageTransition>
-              }
-            />
-            <Route
-              path="/data-sources"
-              element={
-                <PageTransition>
-                  <DataSourcesPage />
-                </PageTransition>
-              }
-            />
-            <Route
-              path="/about"
-              element={
-                <PageTransition>
-                  <AboutPage />
-                </PageTransition>
-              }
-            />
-            <Route
-              path="/glof"
-              element={
-                <PageTransition>
-                  <GlofPage />
-                </PageTransition>
-              }
-            />
-            <Route
-              path="/landslides"
-              element={
-                <PageTransition>
-                  <LandslidesPage />
-                </PageTransition>
-              }
-            />
-          </Route>
-
-          {/* 404 */}
+        {/* Protected Routes */}
+        <Route element={<ProtectedRoute />}>
           <Route
-            path="*"
+            path="/dashboard"
             element={
+              <PageErrorBoundary pageName="Dashboard">
+                <Suspense fallback={<PageSkeleton variant="dashboard" />}>
+                  <PageTransition>
+                    <Index />
+                  </PageTransition>
+                </Suspense>
+              </PageErrorBoundary>
+            }
+          />
+          <Route
+            path="/risk-map"
+            element={
+              <PageErrorBoundary pageName="Risk Map">
+                <Suspense fallback={<PageSkeleton variant="map" />}>
+                  <PageTransition>
+                    <RiskMapPage />
+                  </PageTransition>
+                </Suspense>
+              </PageErrorBoundary>
+            }
+          />
+          <Route
+            path="/monitoring"
+            element={
+              <PageErrorBoundary pageName="River Monitoring">
+                <Suspense fallback={<PageSkeleton variant="detail" />}>
+                  <PageTransition>
+                    <MonitoringPage />
+                  </PageTransition>
+                </Suspense>
+              </PageErrorBoundary>
+            }
+          />
+          <Route
+            path="/alerts"
+            element={
+              <PageErrorBoundary pageName="Alerts">
+                <Suspense fallback={<PageSkeleton variant="list" />}>
+                  <PageTransition>
+                    <AlertsPage />
+                  </PageTransition>
+                </Suspense>
+              </PageErrorBoundary>
+            }
+          />
+          <Route
+            path="/citizen-reports"
+            element={
+              <PageErrorBoundary pageName="Citizen Reports">
+                <Suspense fallback={<PageSkeleton variant="list" />}>
+                  <PageTransition>
+                    <CitizenReportsPage />
+                  </PageTransition>
+                </Suspense>
+              </PageErrorBoundary>
+            }
+          />
+          <Route
+            path="/data-sources"
+            element={
+              <PageErrorBoundary pageName="Data Sources">
+                <Suspense fallback={<PageSkeleton variant="list" />}>
+                  <PageTransition>
+                    <DataSourcesPage />
+                  </PageTransition>
+                </Suspense>
+              </PageErrorBoundary>
+            }
+          />
+          <Route
+            path="/about"
+            element={
+              <PageErrorBoundary pageName="About">
+                <Suspense fallback={<PageSkeleton variant="detail" />}>
+                  <PageTransition>
+                    <AboutPage />
+                  </PageTransition>
+                </Suspense>
+              </PageErrorBoundary>
+            }
+          />
+          <Route
+            path="/glof"
+            element={
+              <PageErrorBoundary pageName="GLOF Monitoring">
+                <Suspense fallback={<PageSkeleton variant="detail" />}>
+                  <PageTransition>
+                    <GlofPage />
+                  </PageTransition>
+                </Suspense>
+              </PageErrorBoundary>
+            }
+          />
+          <Route
+            path="/landslides"
+            element={
+              <PageErrorBoundary pageName="Landslide Prediction">
+                <Suspense fallback={<PageSkeleton variant="detail" />}>
+                  <PageTransition>
+                    <LandslidesPage />
+                  </PageTransition>
+                </Suspense>
+              </PageErrorBoundary>
+            }
+          />
+          <Route
+            path="/admin/users"
+            element={
+              <PageErrorBoundary pageName="User Management">
+                <Suspense fallback={<PageSkeleton variant="list" />}>
+                  <PageTransition>
+                    <AdminUsersPage />
+                  </PageTransition>
+                </Suspense>
+              </PageErrorBoundary>
+            }
+          />
+        </Route>
+
+        {/* 404 */}
+        <Route
+          path="*"
+          element={
+            <PageErrorBoundary>
               <PageTransition>
                 <NotFound />
               </PageTransition>
-            }
-          />
-        </Routes>
-      </AnimatePresence>
-    </Suspense>
+            </PageErrorBoundary>
+          }
+        />
+      </Routes>
+    </AnimatePresence>
   );
 }
 
 const App = () => (
-  <ThemeProvider defaultTheme="system" storageKey="bahuraksha-ui-theme">
-    <AuthProvider>
-      <QueryClientProvider client={queryClient}>
-        <TooltipProvider delayDuration={100}>
-          <Sonner
-            position="bottom-right"
-            toastOptions={{
-              className: "bg-card border-border",
-            }}
-          />
-          <BrowserRouter>
-            <AnimatedRoutes />
-          </BrowserRouter>
-        </TooltipProvider>
-      </QueryClientProvider>
-    </AuthProvider>
-  </ThemeProvider>
+  <ErrorBoundary>
+    <ThemeProvider defaultTheme="system" storageKey="bahuraksha-ui-theme">
+      <AuthProvider>
+        <QueryClientProvider client={queryClient}>
+          <TooltipProvider delayDuration={100}>
+            <Sonner
+              position="bottom-right"
+              toastOptions={{
+                className: "bg-card border-border",
+              }}
+            />
+            <BrowserRouter>
+              <AnimatedRoutes />
+            </BrowserRouter>
+          </TooltipProvider>
+        </QueryClientProvider>
+      </AuthProvider>
+    </ThemeProvider>
+  </ErrorBoundary>
 );
 
 export default App;

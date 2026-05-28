@@ -1,5 +1,5 @@
-"""Tests for main.py DEM query and dynamic elevation/slope integration."""
-from main import get_dem_features, build_feature_vector
+"""Tests for satellite.py DEM query and dynamic elevation/slope integration."""
+from satellite import get_dem_features, build_feature_vector
 
 
 def test_get_dem_features_returns_expected_keys():

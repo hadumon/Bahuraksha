@@ -19,4 +19,17 @@ export default defineConfig({
     host: "0.0.0.0",
     port: 8080,
   },
+  build: {
+    chunkSizeWarningLimit: 1000,
+    rollupOptions: {
+      output: {
+        manualChunks: {
+          vendor: ["react", "react-dom"],
+          charts: ["recharts"],
+          maps: ["leaflet"],
+          three: ["@react-three/fiber", "@react-three/drei", "three"],
+        },
+      },
+    },
+  },
 });

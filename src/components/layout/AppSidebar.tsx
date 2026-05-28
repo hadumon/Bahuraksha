@@ -12,20 +12,30 @@ import {
   X,
   Snowflake,
   Mountain,
+  UserCog,
 } from "lucide-react";
 import { useAuth } from "@/components/auth/useAuth";
 import { cn } from "@/lib/utils";
+import { hasPermission } from "@/lib/permissions";
 
-const navItems = [
-  { path: "/dashboard", icon: LayoutDashboard, label: "Dashboard" },
-  { path: "/risk-map", icon: Map, label: "Risk Map" },
-  { path: "/monitoring", icon: Activity, label: "River Monitoring" },
-  { path: "/glof", icon: Snowflake, label: "GLOF Monitoring" },
-  { path: "/landslides", icon: Mountain, label: "Landslide Prediction" },
-  { path: "/alerts", icon: AlertTriangle, label: "Alerts" },
-  { path: "/citizen-reports", icon: Users, label: "Citizen Reports" },
-  { path: "/data-sources", icon: Database, label: "Data Sources" },
-  { path: "/about", icon: Info, label: "About" },
+interface NavItemDef {
+  path: string;
+  icon: typeof LayoutDashboard;
+  label: string;
+  permission: Parameters<typeof hasPermission>[1];
+}
+
+const ALL_NAV_ITEMS: NavItemDef[] = [
+  { path: "/dashboard", icon: LayoutDashboard, label: "Dashboard", permission: "view:dashboard" },
+  { path: "/risk-map", icon: Map, label: "Risk Map", permission: "view:risk-map" },
+  { path: "/monitoring", icon: Activity, label: "River Monitoring", permission: "view:monitoring" },
+  { path: "/glof", icon: Snowflake, label: "GLOF Monitoring", permission: "view:glof" },
+  { path: "/landslides", icon: Mountain, label: "Landslide Prediction", permission: "view:landslides" },
+  { path: "/alerts", icon: AlertTriangle, label: "Alerts", permission: "view:alerts" },
+  { path: "/citizen-reports", icon: Users, label: "Citizen Reports", permission: "view:citizen-reports" },
+  { path: "/data-sources", icon: Database, label: "Data Sources", permission: "view:data-sources" },
+  { path: "/about", icon: Info, label: "About", permission: "view:about" },
+  { path: "/admin/users", icon: UserCog, label: "User Management", permission: "view:admin" },
 ];
 
 interface Props {
@@ -54,13 +64,56 @@ function BrandLink({ onClick }: { onClick?: () => void }) {
 
 export default function AppSidebar({ isMobile, mobileOpen, onClose }: Props) {
   const location = useLocation();
-  const { user, signOut } = useAuth();
+  const { user, userRole, signOut } = useAuth();
   const navigate = useNavigate();
 
   const handleLogout = async () => {
     await signOut();
     navigate("/login");
   };
+
+  const sidebar = (
+    <>
+      <div className="flex items-center justify-between px-4 h-16 border-b border-sidebar-border gap-3">
+        <BrandLink onClick={isMobile ? onClose : undefined} />
+        {isMobile && (
+          <button
+            onClick={onClose}
+            className="p-2 rounded-lg text-muted-foreground hover:text-foreground hover:bg-sidebar-accent transition-colors"
+          >
+            <X className="w-5 h-5" />
+          </button>
+        )}
+      </div>
+      <NavList location={location} userRole={userRole} onNavigate={isMobile ? onClose : undefined} />
+      <div className="px-3 py-4 border-t border-sidebar-border mt-auto">
+        {user ? (
+          <div className="space-y-3">
+            <div className="px-3 py-2 rounded-lg bg-sidebar-accent/50">
+              <p className="text-xs text-muted-foreground">Signed in as</p>
+              <p className="text-sm font-medium text-foreground truncate">{user.email}</p>
+              {userRole && (
+                <p className="text-xs capitalize text-muted-foreground mt-0.5">{userRole}</p>
+              )}
+            </div>
+            <button
+              onClick={handleLogout}
+              className="w-full px-3 py-2 text-left text-sm text-risk-evacuate hover:bg-risk-evacuate/10 rounded-lg transition-colors"
+            >
+              Sign out
+            </button>
+          </div>
+        ) : (
+          <button
+            onClick={() => navigate("/login")}
+            className="w-full px-3 py-2 text-left text-sm text-ocean-400 hover:bg-ocean-400/10 rounded-lg transition-colors"
+          >
+            Sign in / Sign up
+          </button>
+        )}
+      </div>
+    </>
+  );
 
   if (isMobile) {
     return (
@@ -81,42 +134,7 @@ export default function AppSidebar({ isMobile, mobileOpen, onClose }: Props) {
               transition={{ duration: 0.3, ease: [0.4, 0, 0.2, 1] }}
               className="fixed left-0 top-0 h-screen w-[280px] bg-sidebar border-r border-sidebar-border z-50 flex flex-col"
             >
-              <div className="flex items-center justify-between px-4 h-16 border-b border-sidebar-border gap-3">
-                <BrandLink onClick={onClose} />
-                <button
-                  onClick={onClose}
-                  className="p-2 rounded-lg text-muted-foreground hover:text-foreground hover:bg-sidebar-accent transition-colors"
-                >
-                  <X className="w-5 h-5" />
-                </button>
-              </div>
-              <NavList location={location} onNavigate={onClose} />
-              <div className="px-3 py-4 border-t border-sidebar-border">
-                {user ? (
-                  <div className="space-y-3">
-                    <div className="px-3 py-2 rounded-lg bg-sidebar-accent/50">
-                      <p className="text-xs text-muted-foreground">Signed in as</p>
-                      <p className="text-sm font-medium text-foreground truncate">{user.email}</p>
-                    </div>
-                    <button
-                      onClick={handleLogout}
-                      className="w-full px-3 py-2 text-left text-sm text-risk-evacuate hover:bg-risk-evacuate/10 rounded-lg transition-colors"
-                    >
-                      Sign out
-                    </button>
-                  </div>
-                ) : (
-                  <button
-                    onClick={() => {
-                      onClose();
-                      navigate("/login");
-                    }}
-                    className="w-full px-3 py-2 text-left text-sm text-ocean-400 hover:bg-ocean-400/10 rounded-lg transition-colors"
-                  >
-                    Sign in / Sign up
-                  </button>
-                )}
-              </div>
+              {sidebar}
             </motion.aside>
           </>
         )}
@@ -126,48 +144,30 @@ export default function AppSidebar({ isMobile, mobileOpen, onClose }: Props) {
 
   return (
     <aside className="fixed left-0 top-0 h-screen w-[260px] bg-sidebar border-r border-sidebar-border z-50 flex flex-col">
-      <div className="px-4 h-16 border-b border-sidebar-border flex items-center">
-        <BrandLink />
-      </div>
-      <NavList location={location} />
-
-      <div className="px-3 py-4 border-t border-sidebar-border mt-auto">
-        {user ? (
-          <div className="space-y-3">
-            <div className="px-3 py-2 rounded-lg bg-sidebar-accent/50">
-              <p className="text-xs text-muted-foreground">Signed in as</p>
-              <p className="text-sm font-medium text-foreground truncate">{user.email}</p>
-            </div>
-            <button
-              onClick={handleLogout}
-              className="w-full px-3 py-2 text-left text-sm text-risk-evacuate hover:bg-risk-evacuate/10 rounded-lg transition-colors"
-            >
-              Sign out
-            </button>
-          </div>
-        ) : (
-          <button
-            onClick={() => navigate("/login")}
-            className="w-full px-3 py-2 text-left text-sm text-ocean-400 hover:bg-ocean-400/10 rounded-lg transition-colors"
-          >
-            Sign in / Sign up
-          </button>
-        )}
-      </div>
+      {sidebar}
     </aside>
   );
 }
 
 function NavList({
   location,
+  userRole,
   onNavigate,
 }: {
   location: ReturnType<typeof useLocation>;
+  userRole: string | null;
   onNavigate?: () => void;
 }) {
+  const skipAuth = import.meta.env.VITE_DISABLE_AUTH === "true";
+  const visibleItems = skipAuth
+    ? ALL_NAV_ITEMS
+    : ALL_NAV_ITEMS.filter(
+        (item) => !item.permission || hasPermission(userRole as any, item.permission),
+      );
+
   return (
     <nav className="flex-1 py-4 px-2 space-y-1 overflow-y-auto">
-      {navItems.map((item) => {
+      {visibleItems.map((item) => {
         const isActive = location.pathname === item.path;
         return (
           <Link
@@ -181,7 +181,6 @@ function NavList({
                 : "text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground border border-transparent",
             )}
           >
-            {/* Active indicator */}
             {isActive && (
               <motion.div
                 layoutId="activeNav"
@@ -189,7 +188,6 @@ function NavList({
                 transition={{ type: "spring", stiffness: 380, damping: 30 }}
               />
             )}
-
             <item.icon
               className={cn(
                 "w-5 h-5 flex-shrink-0 transition-colors",
@@ -199,8 +197,6 @@ function NavList({
               )}
             />
             <span className="truncate font-medium">{item.label}</span>
-
-            {/* Active glow effect */}
             {isActive && <div className="absolute inset-0 bg-ocean-400/5 rounded-xl" />}
           </Link>
         );

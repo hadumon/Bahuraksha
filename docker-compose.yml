@@ -1,0 +1,55 @@
+version: "3.8"
+
+services:
+  ml-api:
+    build:
+      context: ./ml-pipeline
+      dockerfile: Dockerfile
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./ml-pipeline/models:/app/models
+    environment:
+      - PYTHONUNBUFFERED=1
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/health')"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    deploy:
+      resources:
+        limits:
+          memory: 2G
+        reservations:
+          memory: 1G
+
+  ml-train:
+    build:
+      context: ./ml-pipeline
+      dockerfile: Dockerfile
+    volumes:
+      - ./ml-pipeline/data:/app/data
+      - ./ml-pipeline/models:/app/models
+    command: python train.py --n-samples 50000
+    profiles:
+      - train
+
+  ml-evaluate:
+    build:
+      context: ./ml-pipeline
+      dockerfile: Dockerfile
+    volumes:
+      - ./ml-pipeline/models:/app/models
+    command: python evaluate.py
+    profiles:
+      - evaluate
+
+  ml-test:
+    build:
+      context: ./ml-pipeline
+      dockerfile: Dockerfile
+    volumes:
+      - ./ml-pipeline:/app
+    command: pytest tests/ -v
+    profiles:
+      - test

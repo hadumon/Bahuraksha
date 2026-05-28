@@ -1,725 +1,317 @@
-"""
-Bahuraksha Early Warning System — Production API
-=================================================
-Real pixel-level band extraction from Earth Search COGs via rasterio.
-No placeholder values. Every prediction uses actual satellite imagery.
+"""Bahuraksha Early Warning System — Unified API (STAC + CSV models)."""
 
-Install:
-pip install fastapi uvicorn joblib xgboost numpy rasterio requests pydantic
-
-Run locally:
-uvicorn main:app --reload --port 8000
-
-Deploy (Render):
-Start command:
-uvicorn main:app --host 0.0.0.0 --port 10000
-"""
-
-import os
-import math
+import hashlib
+import json
 import logging
+import os
+import time
+import uuid
 import warnings
-from datetime import datetime, timedelta
-from typing import Optional
+from datetime import datetime, timezone
+from functools import lru_cache
+from typing import Any
 
 import numpy as np
+import pandas as pd
 import rasterio
-from rasterio.windows import from_bounds
-from rasterio.enums import Resampling
-from rasterio.crs import CRS
-from rasterio.warp import transform_bounds
-import requests
-import xgboost as xgb
-
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, Query, Request
 from fastapi.middleware.cors import CORSMiddleware
-from pydantic import BaseModel, Field
+from fastapi.responses import JSONResponse
+from starlette.middleware.base import BaseHTTPMiddleware
+
+from . import config
+from .satellite import (
+    BAHURAKSHA_BBOX, search_stac, extract_s2_features, extract_s1_features,
+    compute_change_indices, build_feature_vector, get_dem_features,
+    CLASS_LABELS, CLASS_COLORS,
+)
+from .csv_models import (
+    _load_model_bundle, _model_version, _build_feature_row, _risk_level,
+    load_daily_rainfall, load_daily_discharge, load_daily_sar,
+    zone_static_features,
+    FloodPredictRequest, LandslidePredictRequest, PredictResponse,
+    SatelliteIngestRequest, SatelliteIngestRow,
+    ZoneRiskItem, LiveZoneRiskResponse,
+    BAGMATI_ZONES, NDVI_PROXY, WORLDCOVER_CLASSES,
+)
 
 warnings.filterwarnings("ignore", category=rasterio.errors.NotGeoreferencedWarning)
-
 logging.basicConfig(level=logging.INFO)
 log = logging.getLogger("bahuraksha")
 
-# ─────────────────────────────────────────────
-# FastAPI Setup
-# ─────────────────────────────────────────────
+app = FastAPI(title="Bahuraksha Early Warning System", version="1.0.0")
+app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_methods=["*"], allow_headers=["*"])
 
-app = FastAPI(
-    title="Bahuraksha Early Warning System API",
-    version="1.0.0",
-)
+FLOOD_MODEL_PATH = config.MODELS_DIR / "flood_model.pkl"
+LANDSLIDE_MODEL_PATH = config.MODELS_DIR / "landslide_model.pkl"
 
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=["*"],
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
+# ─── API key authentication ───────────────────────────────────────────────────
+API_KEY = os.getenv("BAHURAKSHA_API_KEY", "")
 
-# ─────────────────────────────────────────────
-# Constants
-# ─────────────────────────────────────────────
+class APIKeyMiddleware(BaseHTTPMiddleware):
+    async def dispatch(self, request: Request, call_next):
+        if API_KEY:
+            auth_header = request.headers.get("X-API-Key", "")
+            if auth_header != API_KEY:
+                if request.url.path not in ("/", "/health", "/ready", "/version", "/docs", "/openapi.json"):
+                    return JSONResponse(status_code=401, content={"detail": "Invalid or missing API key"})
+        return await call_next(request)
 
-BAHURAKSHA_BBOX = [86.0, 27.7, 86.6, 28.1]
+app.add_middleware(APIKeyMiddleware)
 
-EARTH_SEARCH = "https://earth-search.aws.element84.com/v1/search"
+# ─── Request-ID logging ───────────────────────────────────────────────────────
+class RequestIDMiddleware(BaseHTTPMiddleware):
+    async def dispatch(self, request: Request, call_next):
+        rid = str(uuid.uuid4())[:8]
+        start = time.time()
+        response = await call_next(request)
+        elapsed = time.time() - start
+        log.info("[%s] %s %s → %s (%.3fs)", rid, request.method, request.url.path, response.status_code, elapsed)
+        response.headers["X-Request-ID"] = rid
+        response.headers["X-Response-Time-Ms"] = str(round(elapsed * 1000))
+        return response
 
-AOI_ELEVATION_M = 2850.0
-AOI_SLOPE_DEG = 18.5
-DEM_COLLECTION = "cop-dem-glo-30"
+app.add_middleware(RequestIDMiddleware)
 
+# ─── Simple in-memory cache ──────────────────────────────────────────────────
+CACHE_TTL = int(os.getenv("BAHURAKSHA_CACHE_TTL", "300"))
+_cache: dict[str, tuple[float, Any]] = {}
 
-def get_dem_features(bbox):
-    """Query Copernicus DEM GLO-30 at bbox and return elevation_m + slope_deg."""
-    try:
-        item = search_stac(DEM_COLLECTION, bbox, "2024-01-01", 365, 100)
-    except HTTPException:
-        log.warning("No DEM scene found, using hardcoded defaults")
-        return {"elevation_m": AOI_ELEVATION_M, "slope_deg": AOI_SLOPE_DEG}
+def cached(key: str, ttl: int = CACHE_TTL):
+    now = time.time()
+    entry = _cache.get(key)
+    if entry and (now - entry[0]) < ttl:
+        return entry[1]
+    return None
 
-    href = item.get("assets", {}).get("data", {}).get("href")
-    if not href:
-        log.warning("DEM asset missing, using hardcoded defaults")
-        return {"elevation_m": AOI_ELEVATION_M, "slope_deg": AOI_SLOPE_DEG}
+def set_cache(key: str, value: Any, ttl: int = CACHE_TTL):
+    _cache[key] = (time.time(), value)
 
-    try:
-        with rasterio.open(href) as src:
-            west, south, east, north = bbox
-            if src.crs != CRS.from_epsg(4326):
-                left, bottom, right, top = transform_bounds(
-                    "EPSG:4326", src.crs, west, south, east, north
-                )
-            else:
-                left, bottom, right, top = west, south, east, north
+def cache_key(*args, **kwargs) -> str:
+    raw = json.dumps({"args": args, "kwargs": kwargs}, sort_keys=True, default=str)
+    return hashlib.sha256(raw.encode()).hexdigest()
 
-            window = from_bounds(left, bottom, right, top, src.transform)
-            elev = src.read(1, window=window, masked=True)
-            valid = elev.compressed()
-            if len(valid) == 0:
-                log.warning("No valid DEM pixels, using hardcoded defaults")
-                return {"elevation_m": AOI_ELEVATION_M, "slope_deg": AOI_SLOPE_DEG}
-
-            elevation_m = float(np.mean(valid))
-
-            dy, dx = np.gradient(elev.filled(np.nan), src.res[0], src.res[1])
-            slope_rad = np.arctan(np.sqrt(dx**2 + dy**2))
-            valid_slope = slope_rad[~np.isnan(slope_rad)]
-            slope_deg = float(np.degrees(np.mean(valid_slope))) if len(valid_slope) > 0 else AOI_SLOPE_DEG
-
-            return {"elevation_m": round(elevation_m, 1), "slope_deg": round(slope_deg, 1)}
-    except Exception as e:
-        log.warning(f"DEM read failed ({e}), using hardcoded defaults")
-        return {"elevation_m": AOI_ELEVATION_M, "slope_deg": AOI_SLOPE_DEG}
-
-
-CLASS_LABELS = {
-    0: "dry_land",
-    1: "flood_water",
-    2: "snow_glacier"
-}
-
-CLASS_COLORS = {
-    0: "#c8a96e",
-    1: "#1a6faf",
-    2: "#e8f4fd"
-}
-
-MODEL_PATH = os.environ.get(
-    "MODEL_PATH",
-    "bahuraksha_xgb_model.ubj"
-)
-
-# ─────────────────────────────────────────────
-# Model Loading (FIXED)
-# ─────────────────────────────────────────────
-
+# ─── Model loading ────────────────────────────────────────────────────────────
 try:
-    model = xgb.XGBClassifier()
-    model.load_model(MODEL_PATH)
-    log.info(f"Model loaded from {MODEL_PATH}")
+    flood_bundle = _load_model_bundle(FLOOD_MODEL_PATH)
+    landslide_bundle = _load_model_bundle(LANDSLIDE_MODEL_PATH)
+    log.info("Both model bundles loaded successfully")
 except Exception as e:
-    model = None
-    log.error(f"FAILED to load model: {type(e).__name__}: {e}")
+    log.error(f"Failed to load model bundles: {e}")
+    flood_bundle = None
+    landslide_bundle = None
 
-# ─────────────────────────────────────────────
-# Schemas
-# ─────────────────────────────────────────────
-
-class PredictRequest(BaseModel):
-
-    date: str = Field(
-        ...,
-        example="2024-08-15"
-    )
-
-    bbox: Optional[list] = None
-
-    lookback_days: int = 60
-
-    cloud_max: int = 80
-
-class HealthResponse(BaseModel):
-
-    model_config = {"protected_namespaces": ()}
-
-    status: str
-
-    model_loaded: bool
-
-    model_type: str
-
-# ─────────────────────────────────────────────
-# STAC Search
-# ─────────────────────────────────────────────
-
-def search_stac(
-    collection: str,
-    bbox: list,
-    date_str: str,
-    lookback_days: int = 30,
-    cloud_max: int = 80
-):
-
-    target = datetime.strptime(
-        date_str,
-        "%Y-%m-%d"
-    )
-
-    date_from = (
-        target - timedelta(days=lookback_days)
-    ).strftime("%Y-%m-%dT00:00:00Z")
-
-    date_to = target.strftime(
-        "%Y-%m-%dT23:59:59Z"
-    )
-
-    body = {
-        "collections": [collection],
-        "bbox": bbox,
-        "datetime": f"{date_from}/{date_to}",
-        "limit": 1,
-    }
-
-    if collection == "sentinel-2-l2a":
-
-        body["query"] = {
-            "eo:cloud_cover": {
-                "lt": cloud_max
-            }
-        }
-
-    if collection == "sentinel-1-grd":
-
-        body["query"] = {
-            "sar:instrument_mode": {"eq": "IW"},
-            "sat:orbit_state": {"eq": "descending"},
-        }
-
-    res = requests.post(
-        EARTH_SEARCH,
-        json=body,
-        timeout=20
-    )
-
-    res.raise_for_status()
-
-    features = res.json().get(
-        "features",
-        []
-    )
-
-    if not features:
-
-        raise HTTPException(
-            status_code=404,
-            detail=f"No {collection} scene found"
-        )
-
-    return features[0]
-
-# ─────────────────────────────────────────────
-# Raster Reader
-# ─────────────────────────────────────────────
-
-def read_band_mean(href, bbox):
-
-    if href is None:
-        return np.nan
-
-    west, south, east, north = bbox
-
-    try:
-
-        with rasterio.open(href) as src:
-
-            if src.crs != CRS.from_epsg(4326):
-
-                left, bottom, right, top = transform_bounds(
-                    "EPSG:4326",
-                    src.crs,
-                    west,
-                    south,
-                    east,
-                    north
-                )
-
-            else:
-
-                left, bottom, right, top = (
-                    west,
-                    south,
-                    east,
-                    north
-                )
-
-            window = from_bounds(
-                left,
-                bottom,
-                right,
-                top,
-                src.transform
-            )
-
-            data = src.read(
-                1,
-                window=window,
-                out_shape=(1, 64, 64),
-                resampling=Resampling.average,
-                masked=True,
-            )
-
-            valid = data.compressed()
-
-            if len(valid) == 0:
-                return np.nan
-
-            return float(np.mean(valid))
-
-    except Exception:
-
-        return np.nan
-
-# ─────────────────────────────────────────────
-# Feature Engineering
-# ─────────────────────────────────────────────
-
-def safe_index(a, b):
-
-    if np.isnan(a) or np.isnan(b):
-        return 0.0
-
-    if (a + b) == 0:
-        return 0.0
-
-    return float((a - b) / (a + b))
-
-def extract_s2_features(item, bbox):
-
-    assets = item.get("assets", {})
-
-    def get_href(key):
-
-        if key in assets:
-            return assets[key]["href"]
-
-        if key.lower() in assets:
-            return assets[key.lower()]["href"]
-
-        return None
-
-    b2 = read_band_mean(get_href("blue"), bbox)
-    b3 = read_band_mean(get_href("green"), bbox)
-    b4 = read_band_mean(get_href("red"), bbox)
-    b8 = read_band_mean(get_href("nir"), bbox)
-    b11 = read_band_mean(get_href("swir16"), bbox)
-    b12 = read_band_mean(get_href("swir22"), bbox)
-
-    def scale(v):
-
-        if np.isnan(v):
-            return v
-
-        return v / 10000.0 if v > 1 else v
-
-    b2, b3, b4 = scale(b2), scale(b3), scale(b4)
-    b8, b11, b12 = scale(b8), scale(b11), scale(b12)
-
-    ndwi = safe_index(b3, b8)
-    ndsi = safe_index(b3, b11)
-    ndvi = safe_index(b8, b4)
-
-    return {
-        "B2": b2,
-        "B3": b3,
-        "B4": b4,
-        "B8": b8,
-        "B11": b11,
-        "B12": b12,
-        "NDWI": ndwi,
-        "NDSI": ndsi,
-        "NDVI": ndvi,
-        "scene_date": item["properties"]["datetime"][:10],
-        "cloud_cover": item["properties"].get("eo:cloud_cover"),
-    }
-
-def extract_s1_features(item, bbox):
-
-    assets = item.get("assets", {})
-
-    vh_href = assets.get("vh", {}).get("href")
-    vv_href = assets.get("vv", {}).get("href")
-
-    vh_raw = read_band_mean(vh_href, bbox)
-    vv_raw = read_band_mean(vv_href, bbox)
-
-    def to_db(v):
-
-        if np.isnan(v) or v <= 0:
-            return -20.0
-
-        return float(10 * math.log10(v))
-
-    return {
-        "VH_db": to_db(vh_raw),
-        "VV_db": to_db(vv_raw),
-        "scene_date": item["properties"]["datetime"][:10],
-    }
-
-def compute_change_indices(current, reference):
-
-    BASELINE = {
-        "NDWI": -0.18,
-        "NDSI": 0.05,
-        "NDVI": 0.31,
-    }
-
-    ref = reference if reference else BASELINE
-
-    return {
-        "dNDWI": current["NDWI"] - ref["NDWI"],
-        "dNDSI": current["NDSI"] - ref["NDSI"],
-        "dNDVI": current["NDVI"] - ref["NDVI"],
-    }
-
-def build_feature_vector(s2, s1, change, elevation_m=None, slope_deg=None):
-
-    if elevation_m is None:
-        elevation_m = AOI_ELEVATION_M
-    if slope_deg is None:
-        slope_deg = AOI_SLOPE_DEG
-
-    X = np.array([[
-        s2["B2"],
-        s2["B3"],
-        s2["B4"],
-        s2["B8"],
-        s2["B11"],
-        s2["B12"],
-        s2["NDWI"],
-        s2["NDSI"],
-        s2["NDVI"],
-        change["dNDWI"],
-        change["dNDSI"],
-        change["dNDVI"],
-        s1["VH_db"],
-        s1["VV_db"],
-        elevation_m,
-        slope_deg,
-    ]], dtype=np.float32)
-
-    return np.nan_to_num(X)
-
-# ─────────────────────────────────────────────
-# Core Prediction Logic (FIXED)
-# ─────────────────────────────────────────────
-
-def run_prediction(
-    date: str,
-    bbox: list,
-    lookback_days: int = 60,
-    cloud_max: int = 80
-):
-
-    bbox = bbox or BAHURAKSHA_BBOX
-
-    if model is None:
-
-        raise HTTPException(
-            status_code=503,
-            detail="Model not loaded"
-        )
-
-    s2_current_item = search_stac(
-        "sentinel-2-l2a",
-        bbox,
-        date,
-        lookback_days,
-        cloud_max
-    )
-
-    s1_current_item = search_stac(
-        "sentinel-1-grd",
-        bbox,
-        date,
-        lookback_days
-    )
-
-    try:
-
-        ref_date = (
-            datetime.strptime(date, "%Y-%m-%d")
-            - timedelta(days=60)
-        ).strftime("%Y-%m-%d")
-
-        s2_ref_item = search_stac(
-            "sentinel-2-l2a",
-            bbox,
-            ref_date,
-            30,
-            80
-        )
-
-    except HTTPException:
-
-        s2_ref_item = None
-
-    s2_current = extract_s2_features(
-        s2_current_item,
-        bbox
-    )
-
-    s1_current = extract_s1_features(
-        s1_current_item,
-        bbox
-    )
-
-    s2_reference = (
-        extract_s2_features(
-            s2_ref_item,
-            bbox
-        )
-        if s2_ref_item
-        else None
-    )
-
-    change = compute_change_indices(
-        s2_current,
-        s2_reference
-    )
-
-    dem = get_dem_features(bbox)
-
-    X = build_feature_vector(
-        s2_current,
-        s1_current,
-        change,
-        elevation_m=dem["elevation_m"],
-        slope_deg=dem["slope_deg"],
-    )
-
-    pred_proba = model.predict_proba(X)[0]
-
-    pred_class = int(np.argmax(pred_proba))
-
-    confidence = round(
-        float(max(pred_proba)),
-        3
-    )
-
-    label = CLASS_LABELS[pred_class]
-
-    color = CLASS_COLORS[pred_class]
-
-    flood_prob = pred_proba[1]
-
-    sar_signal = max(
-        0,
-        min(
-            1,
-            (-s1_current["VH_db"] - 10) / 20
-        )
-    )
-
-    risk_score = round(
-        (flood_prob * 0.7 + sar_signal * 0.3) * 100,
-        1
-    )
-
-    return {
-
-        "status": "ok",
-
-        "request": {
-            "date": date,
-            "bbox": bbox,
-        },
-
-        "prediction": {
-            "class": pred_class,
-            "label": label,
-            "color": color,
-            "confidence": confidence,
-            "risk_score": risk_score,
-        },
-    }
-
-# ─────────────────────────────────────────────
-# Routes (FIXED)
-# ─────────────────────────────────────────────
 
 @app.get("/")
 def root():
+    return {"project": "Bahuraksha Early Warning System", "status": "online", "docs": "/docs"}
+
+
+@app.get("/health")
+def health() -> dict[str, Any]:
     return {
-        "project": "Bahuraksha Early Warning System",
-        "status": "online",
-        "docs": "/docs",
+        "status": "healthy" if (flood_bundle and landslide_bundle) else "model_missing",
+        "flood_model": flood_bundle["model_name"] if flood_bundle else None,
+        "landslide_model": landslide_bundle["model_name"] if landslide_bundle else None,
     }
 
-@app.get("/health", response_model=HealthResponse)
-def health():
-    return {
-        "status": "healthy" if model else "model_missing",
-        "model_loaded": model is not None,
-        "model_type": type(model).__name__ if model else "none",
-    }
 
 @app.get("/ready")
 def ready():
-    if model is None:
-        raise HTTPException(status_code=503, detail="Model not loaded")
+    if not flood_bundle or not landslide_bundle:
+        raise HTTPException(status_code=503, detail="Models not loaded")
+    return {"status": "ready", "flood_model_loaded": True, "landslide_model_loaded": True}
 
-    return {
-        "status": "ready",
-        "model_loaded": True,
-        "feature_count": 16,
-    }
 
 @app.get("/version")
-def version():
+def version() -> dict[str, Any]:
     return {
         "api_version": app.version,
-        "model_path": MODEL_PATH,
-        "model_loaded": model is not None,
-        "xgboost_version": xgb.__version__,
-        "feature_schema": [
-            "B2", "B3", "B4", "B8", "B11", "B12",
-            "NDWI", "NDSI", "NDVI", "dNDWI", "dNDSI", "dNDVI",
-            "VH_db", "VV_db", "elevation_m", "slope_deg",
-        ],
+        "flood_model": _model_version(FLOOD_MODEL_PATH, str(flood_bundle["model_name"])) if flood_bundle else None,
+        "landslide_model": _model_version(LANDSLIDE_MODEL_PATH, str(landslide_bundle["model_name"])) if landslide_bundle else None,
+        "flood_threshold": float(flood_bundle["threshold"]) if flood_bundle else None,
+        "landslide_threshold": float(landslide_bundle["threshold"]) if landslide_bundle else None,
     }
+
+
+@app.post("/predict/flood", response_model=PredictResponse)
+def predict_flood(payload: FloodPredictRequest) -> PredictResponse:
+    if not flood_bundle:
+        raise HTTPException(status_code=503, detail="Flood model not loaded")
+    features = _build_feature_row(payload.model_dump(), flood_bundle["feature_columns"])
+    prob = float(flood_bundle["model"].predict_proba(features)[0, 1])
+    thr = float(flood_bundle["threshold"])
+    pred = int(prob >= thr)
+    return PredictResponse(
+        model_name=str(flood_bundle["model_name"]),
+        model_version=_model_version(FLOOD_MODEL_PATH, str(flood_bundle["model_name"])),
+        threshold=thr, probability=prob, predicted_event=pred, risk_level=_risk_level(prob),
+    )
+
+
+@app.post("/predict/landslide", response_model=PredictResponse)
+def predict_landslide(payload: LandslidePredictRequest) -> PredictResponse:
+    if not landslide_bundle:
+        raise HTTPException(status_code=503, detail="Landslide model not loaded")
+    features = _build_feature_row(payload.model_dump(), landslide_bundle["feature_columns"])
+    prob = float(landslide_bundle["model"].predict_proba(features)[0, 1])
+    thr = float(landslide_bundle["threshold"])
+    pred = int(prob >= thr)
+    return PredictResponse(
+        model_name=str(landslide_bundle["model_name"]),
+        model_version=_model_version(LANDSLIDE_MODEL_PATH, str(landslide_bundle["model_name"])),
+        threshold=thr, probability=prob, predicted_event=pred, risk_level=_risk_level(prob),
+    )
+
+
+@app.get("/risk/zones")
+def risk_zones(
+    flood_prob: float = Query(..., ge=0.0, le=1.0),
+    landslide_prob: float = Query(..., ge=0.0, le=1.0),
+    rainfall_score: float = Query(..., ge=0.0, le=1.0),
+    zone_name: str = "Bagmati Zone",
+) -> dict[str, Any]:
+    composite = float(0.40 * flood_prob + 0.40 * landslide_prob + 0.20 * rainfall_score)
+    return {
+        "zone": zone_name, "composite_score": composite,
+        "composite_risk_level": _risk_level(composite),
+        "formula": "0.40*flood_prob + 0.40*landslide_prob + 0.20*rainfall_score",
+        "inputs": {"flood_prob": flood_prob, "landslide_prob": landslide_prob, "rainfall_score": rainfall_score},
+    }
+
+
+@app.post("/ingest/satellite")
+def ingest_satellite(payload: SatelliteIngestRequest) -> dict[str, Any]:
+    config.RAW_SENTINEL.mkdir(parents=True, exist_ok=True)
+    out_path = config.RAW_SENTINEL / "satellite_ingest_log.jsonl"
+    written = 0
+    with out_path.open("a", encoding="utf-8") as f:
+        for row in payload.rows:
+            r = row.model_dump()
+            if r.get("sar_vv_vh_ratio_db") is None:
+                r["sar_vv_vh_ratio_db"] = float(r["sar_vv_db"]) - float(r["sar_vh_db"])
+            r["ingested_at_utc"] = datetime.now(timezone.utc).isoformat()
+            f.write(json.dumps(r) + "\n")
+            written += 1
+    return {"status": "ok", "rows_ingested": written, "log_file": str(out_path)}
+
+
+@app.get("/risk/zones/live", response_model=LiveZoneRiskResponse)
+def risk_zones_live(date: str | None = Query(None, description="Optional target date (YYYY-MM-DD).")) -> LiveZoneRiskResponse:
+    ck = cache_key("risk_zones_live", date)
+    hit = cached(ck)
+    if hit is not None:
+        return LiveZoneRiskResponse(**hit)
+
+    if not flood_bundle or not landslide_bundle:
+        raise HTTPException(status_code=503, detail="Models not loaded")
+
+    rainfall = load_daily_rainfall()
+    discharge = load_daily_discharge()
+    sar = load_daily_sar()
+
+    merged = (
+        rainfall.merge(discharge, on="date", how="inner")
+        .merge(sar, on="date", how="inner")
+        .dropna(subset=["rf_1day", "rf_3day", "rf_7day", "rf_30day", "discharge_proxy", "soil_moisture_index", "sar_vv_db", "sar_vh_db", "sar_vv_vh_ratio_db"])
+        .sort_values("date")
+    )
+    if merged.empty:
+        raise HTTPException(status_code=503, detail="No overlapping rainfall/discharge/SAR data available")
+
+    if date is not None:
+        target = pd.to_datetime(date, errors="coerce")
+        if pd.isna(target):
+            raise HTTPException(status_code=422, detail="Invalid date format. Use YYYY-MM-DD")
+        candidates = merged[merged["date"] <= target]
+        if candidates.empty:
+            raise HTTPException(status_code=422, detail="No data available on or before requested date")
+        row = candidates.iloc[-1]
+    else:
+        row = merged.iloc[-1]
+
+    data_date = pd.Timestamp(row["date"]).date().isoformat()
+    rf1, rf3 = float(row["rf_1day"]), float(row["rf_3day"])
+    rainfall_score = float(np.clip((0.7 * rf1 + 0.3 * (rf3 / 3.0)) / 100.0, 0.0, 1.0))
+
+    sar_has_observed = (config.RAW_SENTINEL / "sentinel1_bagmati_daily.csv").exists()
+    dem_has_observed = any(list(config.RAW_DEM.glob("*.tif")) + list(config.RAW_DEM.glob("*.hgt")))
+    landuse_has_observed = any(config.RAW_LANDUSE.glob("*.tif"))
+    quality_score = int(sar_has_observed) + int(dem_has_observed) + int(landuse_has_observed)
+    data_quality = "high" if quality_score >= 3 else ("medium" if quality_score >= 2 else "low")
+
+    static_feats = zone_static_features()
+    zones_list: list[ZoneRiskItem] = []
+    for zone in BAGMATI_ZONES:
+        zid, sf = str(zone["id"]), static_feats[str(zone["id"])]
+        shared = {
+            "date": data_date, "lat": float(zone["lat"]), "lon": float(zone["lon"]),
+            "rf_1day": rf1, "rf_3day": float(row["rf_3day"]),
+            "rf_7day": float(row["rf_7day"]), "rf_30day": float(row["rf_30day"]),
+            "elevation_m": sf["elevation_m"], "slope_deg": sf["slope_deg"],
+            "aspect_deg": sf["aspect_deg"], "curvature": sf["curvature"],
+        }
+
+        flood_payload = {**shared, "discharge_proxy": float(row["discharge_proxy"]),
+            "soil_moisture_index": float(row["soil_moisture_index"]),
+            "sar_vv_db": float(row["sar_vv_db"]), "sar_vh_db": float(row["sar_vh_db"]),
+            "sar_vv_vh_ratio_db": float(row["sar_vv_vh_ratio_db"])}
+        flood_features = _build_feature_row(flood_payload, flood_bundle["feature_columns"])
+        flood_prob = float(flood_bundle["model"].predict_proba(flood_features)[0, 1])
+        flood_pred = int(flood_prob >= float(flood_bundle["threshold"]))
+
+        landslide_payload = {**shared, "landuse_code": int(round(sf["landuse_code"])),
+            "ndvi_proxy": float(sf["ndvi_proxy"]), "dist_drainage_m": float(sf["dist_drainage_m"])}
+        landslide_features = _build_feature_row(landslide_payload, landslide_bundle["feature_columns"])
+        landslide_prob = float(landslide_bundle["model"].predict_proba(landslide_features)[0, 1])
+        landslide_pred = int(landslide_prob >= float(landslide_bundle["threshold"]))
+
+        composite = float(0.40 * flood_prob + 0.40 * landslide_prob + 0.20 * rainfall_score)
+
+        zones_list.append(ZoneRiskItem(
+            zone_id=zid, zone_name=str(zone["name"]), district=str(zone["district"]),
+            lat=float(zone["lat"]), lon=float(zone["lon"]), population=int(zone["population"]),
+            flood_probability=flood_prob, landslide_probability=landslide_prob,
+            rainfall_score=rainfall_score, composite_score=composite,
+            risk_level=_risk_level(composite),
+            flood_predicted_event=flood_pred, landslide_predicted_event=landslide_pred,
+            data_quality=data_quality,
+        ))
+
+    zones_list.sort(key=lambda z: z.composite_score, reverse=True)
+    result = LiveZoneRiskResponse(
+        requested_date=date, data_date=data_date,
+        generated_at_utc=datetime.now(timezone.utc).isoformat(),
+        source="bahuraksha_api_daily_feature_aggregation",
+        formula="0.40*flood_prob + 0.40*landslide_prob + 0.20*rainfall_score",
+        model_versions={
+            "flood_model": _model_version(FLOOD_MODEL_PATH, str(flood_bundle["model_name"])),
+            "landslide_model": _model_version(LANDSLIDE_MODEL_PATH, str(landslide_bundle["model_name"])),
+        },
+        zones=zones_list,
+    )
+    set_cache(ck, result.model_dump())
+    return result
+
 
 @app.post("/debug/features")
-def debug_features(req: PredictRequest):
-    bbox = req.bbox or BAHURAKSHA_BBOX
-    s2_current_item = search_stac("sentinel-2-l2a", bbox, req.date, req.lookback_days, req.cloud_max)
-    s1_current_item = search_stac("sentinel-1-grd", bbox, req.date, req.lookback_days)
-    s2_current = extract_s2_features(s2_current_item, bbox)
-    s1_current = extract_s1_features(s1_current_item, bbox)
-    change = compute_change_indices(s2_current, None)
+def debug_features(date: str, bbox: list | None = None, lookback_days: int = 60, cloud_max: int = 80):
+    bbox = bbox or BAHURAKSHA_BBOX
+    s2_item = search_stac("sentinel-2-l2a", bbox, date, lookback_days, cloud_max)
+    s1_item = search_stac("sentinel-1-grd", bbox, date, lookback_days)
+    s2 = extract_s2_features(s2_item, bbox)
+    s1 = extract_s1_features(s1_item, bbox)
+    change = compute_change_indices(s2, None)
     dem = get_dem_features(bbox)
-    X = build_feature_vector(s2_current, s1_current, change, elevation_m=dem["elevation_m"], slope_deg=dem["slope_deg"])
+    X = build_feature_vector(s2, s1, change, elevation_m=dem["elevation_m"], slope_deg=dem["slope_deg"])
+    return {"date": date, "bbox": bbox, "dem": dem, "s2": s2, "s1": s1, "change": change, "feature_vector": X[0].tolist()}
 
-    return {
-        "date": req.date,
-        "bbox": bbox,
-        "dem": dem,
-        "s2": s2_current,
-        "s1": s1_current,
-        "change": change,
-        "feature_vector": X[0].tolist(),
-    }
-
-@app.post("/predict")
-def predict(req: PredictRequest):
-
-    return run_prediction(
-        req.date,
-        req.bbox,
-        req.lookback_days,
-        req.cloud_max,
-    )
-
-@app.get("/latest")
-def latest():
-
-    today = datetime.utcnow().strftime(
-        "%Y-%m-%d"
-    )
-
-    return run_prediction(
-        today,
-        BAHURAKSHA_BBOX
-    )
-
-@app.get("/history")
-def history(days: int = 7):
-
-    results = []
-
-    for i in range(days):
-
-        date = (
-            datetime.utcnow()
-            - timedelta(days=i)
-        ).strftime("%Y-%m-%d")
-
-        try:
-
-            r = run_prediction(
-                date,
-                BAHURAKSHA_BBOX
-            )
-
-            results.append({
-                "date": date,
-                "label": r["prediction"]["label"],
-                "risk_score": r["prediction"]["risk_score"],
-                "confidence": r["prediction"]["confidence"],
-            })
-
-        except HTTPException as e:
-
-            results.append({
-                "date": date,
-                "error": e.detail
-            })
-
-    return {"history": results}
 
 @app.get("/debug")
-def debug():
-
+def debug() -> dict[str, Any]:
     cwd = os.getcwd()
-
-    load_error = None
-
-    try:
-
-        b = xgb.XGBClassifier()
-
-        b.load_model(
-            "bahuraksha_xgb_model.ubj"
-        )
-
-        load_test = "SUCCESS"
-
-    except Exception as e:
-
-        load_test = "FAILED"
-
-        load_error = str(e)
-
     return {
-
-        "cwd": cwd,
-
-        "files": os.listdir(cwd),
-
-        "model_loaded": model is not None,
-
-        "live_load_test": load_test,
-
-        "load_error": load_error,
-
-        "xgboost_version": xgb.__version__,
+        "cwd": cwd, "files": os.listdir(cwd),
+        "flood_model_loaded": flood_bundle is not None,
+        "landslide_model_loaded": landslide_bundle is not None,
     }
