@@ -58,7 +58,6 @@ build/
 # =========================
 # BACKEND / PYTHON FRAMEWORKS
 # =========================
-.nitro/
 .pytest_cache/
 .mypy_cache/
 .coverage
@@ -71,14 +70,6 @@ coverage.xml
 .env.*
 !.env.example
 .dev.vars
-
-# =========================
-# CLOUD / DEPLOYMENT
-# =========================
-.wrangler/
-.serverless/
-.netlify/
-.vercel/
 
 # =========================
 # DATABASE FILES
@@ -130,6 +121,7 @@ docs/explanation.md
 # AGENTS / WORKSPACE CONFIG
 # =========================
 .agents/
+.claude/
 
 # =========================
 # ML PIPELINE ARTIFACTS

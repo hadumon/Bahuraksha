@@ -8,8 +8,6 @@ export default tseslint.config(
   {
     ignores: [
       "dist",
-      ".output",
-      ".vinxi",
       ".venv",
       "node_modules",
       "playwright-report",
