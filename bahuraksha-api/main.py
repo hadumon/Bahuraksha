@@ -66,6 +66,51 @@ EARTH_SEARCH = "https://earth-search.aws.element84.com/v1/search"
 
 AOI_ELEVATION_M = 2850.0
 AOI_SLOPE_DEG = 18.5
+DEM_COLLECTION = "cop-dem-glo-30"
+
+
+def get_dem_features(bbox):
+    """Query Copernicus DEM GLO-30 at bbox and return elevation_m + slope_deg."""
+    try:
+        item = search_stac(DEM_COLLECTION, bbox, "2024-01-01", 365, 100)
+    except HTTPException:
+        log.warning("No DEM scene found, using hardcoded defaults")
+        return {"elevation_m": AOI_ELEVATION_M, "slope_deg": AOI_SLOPE_DEG}
+
+    href = item.get("assets", {}).get("data", {}).get("href")
+    if not href:
+        log.warning("DEM asset missing, using hardcoded defaults")
+        return {"elevation_m": AOI_ELEVATION_M, "slope_deg": AOI_SLOPE_DEG}
+
+    try:
+        with rasterio.open(href) as src:
+            west, south, east, north = bbox
+            if src.crs != CRS.from_epsg(4326):
+                left, bottom, right, top = transform_bounds(
+                    "EPSG:4326", src.crs, west, south, east, north
+                )
+            else:
+                left, bottom, right, top = west, south, east, north
+
+            window = from_bounds(left, bottom, right, top, src.transform)
+            elev = src.read(1, window=window, masked=True)
+            valid = elev.compressed()
+            if len(valid) == 0:
+                log.warning("No valid DEM pixels, using hardcoded defaults")
+                return {"elevation_m": AOI_ELEVATION_M, "slope_deg": AOI_SLOPE_DEG}
+
+            elevation_m = float(np.mean(valid))
+
+            dy, dx = np.gradient(elev.filled(np.nan), src.res[0], src.res[1])
+            slope_rad = np.arctan(np.sqrt(dx**2 + dy**2))
+            valid_slope = slope_rad[~np.isnan(slope_rad)]
+            slope_deg = float(np.degrees(np.mean(valid_slope))) if len(valid_slope) > 0 else AOI_SLOPE_DEG
+
+            return {"elevation_m": round(elevation_m, 1), "slope_deg": round(slope_deg, 1)}
+    except Exception as e:
+        log.warning(f"DEM read failed ({e}), using hardcoded defaults")
+        return {"elevation_m": AOI_ELEVATION_M, "slope_deg": AOI_SLOPE_DEG}
+
 
 CLASS_LABELS = {
     0: "dry_land",
