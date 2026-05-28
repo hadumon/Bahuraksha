@@ -401,7 +401,12 @@ def compute_change_indices(current, reference):
         "dNDVI": current["NDVI"] - ref["NDVI"],
     }
 
-def build_feature_vector(s2, s1, change):
+def build_feature_vector(s2, s1, change, elevation_m=None, slope_deg=None):
+
+    if elevation_m is None:
+        elevation_m = AOI_ELEVATION_M
+    if slope_deg is None:
+        slope_deg = AOI_SLOPE_DEG
 
     X = np.array([[
         s2["B2"],
@@ -418,8 +423,8 @@ def build_feature_vector(s2, s1, change):
         change["dNDVI"],
         s1["VH_db"],
         s1["VV_db"],
-        AOI_ELEVATION_M,
-        AOI_SLOPE_DEG,
+        elevation_m,
+        slope_deg,
     ]], dtype=np.float32)
 
     return np.nan_to_num(X)
@@ -502,10 +507,14 @@ def run_prediction(
         s2_reference
     )
 
+    dem = get_dem_features(bbox)
+
     X = build_feature_vector(
         s2_current,
         s1_current,
-        change
+        change,
+        elevation_m=dem["elevation_m"],
+        slope_deg=dem["slope_deg"],
     )
 
     pred_proba = model.predict_proba(X)[0]
@@ -607,11 +616,13 @@ def debug_features(req: PredictRequest):
     s2_current = extract_s2_features(s2_current_item, bbox)
     s1_current = extract_s1_features(s1_current_item, bbox)
     change = compute_change_indices(s2_current, None)
-    X = build_feature_vector(s2_current, s1_current, change)
+    dem = get_dem_features(bbox)
+    X = build_feature_vector(s2_current, s1_current, change, elevation_m=dem["elevation_m"], slope_deg=dem["slope_deg"])
 
     return {
         "date": req.date,
         "bbox": bbox,
+        "dem": dem,
         "s2": s2_current,
         "s1": s1_current,
         "change": change,
