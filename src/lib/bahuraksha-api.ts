@@ -28,6 +28,7 @@ export interface HistoryEntry {
 
 export interface HistoryResponse {
   history: HistoryEntry[];
+  isMock?: boolean;
 }
 
 export interface HealthResponse {
@@ -164,7 +165,7 @@ export async function getHistory(days: number = 7): Promise<HistoryResponse> {
         confidence: 0.85 + (Math.random() * 0.1),
       });
     }
-    return { history: history.reverse() };
+    return { history: history.reverse(), isMock: true };
   }
 }
 
