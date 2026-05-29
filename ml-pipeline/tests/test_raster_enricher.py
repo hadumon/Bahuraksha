@@ -149,14 +149,17 @@ class TestLandslideEnricherSentinel2:
         """When S2 is available, enrich_point should use real NDVI."""
         mock_read_s2.return_value = {"ndvi": 0.65, "vegetation_cover_pct": 72.0}
         enricher = LandslideEnricher()
-        # Mock DEM to succeed too
         with patch.object(enricher, "_search_dem") as mock_dem, \
-             patch.object(enricher, "_read_dem_features") as mock_read_dem:
+             patch.object(enricher, "_read_dem_features") as mock_read_dem, \
+             patch.object(enricher, "_search_worldcover") as mock_wc, \
+             patch.object(enricher, "_read_worldcover_code") as mock_read_wc:
             mock_dem.return_value = {}
             mock_read_dem.return_value = {
                 "elevation_m": 1500.0, "slope_angle_deg": 25.0,
                 "aspect_deg": 180.0, "curvature": 0.0,
             }
+            mock_wc.return_value = {}
+            mock_read_wc.return_value = {"land_use_code": 3.0}
             result = enricher.enrich_point(lat=27.85, lon=85.55)
 
         assert result["ndvi"] == 0.65
@@ -169,12 +172,16 @@ class TestLandslideEnricherSentinel2:
         mock_search_s2.side_effect = RuntimeError("S2 unavailable")
         enricher = LandslideEnricher()
         with patch.object(enricher, "_search_dem") as mock_dem, \
-             patch.object(enricher, "_read_dem_features") as mock_read_dem:
+             patch.object(enricher, "_read_dem_features") as mock_read_dem, \
+             patch.object(enricher, "_search_worldcover") as mock_wc, \
+             patch.object(enricher, "_read_worldcover_code") as mock_read_wc:
             mock_dem.return_value = {}
             mock_read_dem.return_value = {
                 "elevation_m": 1500.0, "slope_angle_deg": 25.0,
                 "aspect_deg": 180.0, "curvature": 0.0,
             }
+            mock_wc.return_value = {}
+            mock_read_wc.return_value = {"land_use_code": 3.0}
             result = enricher.enrich_point(lat=27.85, lon=85.55)
 
         assert 0.0 <= result["ndvi"] <= 1.0
@@ -187,13 +194,57 @@ class TestLandslideEnricherSentinel2:
         mock_read_s2.return_value = {"ndvi": 0.65, "vegetation_cover_pct": 72.0}
         enricher = LandslideEnricher()
         with patch.object(enricher, "_search_dem") as mock_dem, \
-             patch.object(enricher, "_read_dem_features") as mock_read_dem:
+             patch.object(enricher, "_read_dem_features") as mock_read_dem, \
+             patch.object(enricher, "_search_worldcover") as mock_wc, \
+             patch.object(enricher, "_read_worldcover_code") as mock_read_wc:
             mock_dem.return_value = {}
             mock_read_dem.return_value = {
                 "elevation_m": 1500.0, "slope_angle_deg": 25.0,
                 "aspect_deg": 180.0, "curvature": 0.0,
             }
+            mock_wc.return_value = {}
+            mock_read_wc.return_value = {"land_use_code": 3.0}
             enricher.enrich_point(lat=27.85, lon=85.55)
             enricher.enrich_point(lat=27.85, lon=85.55)
 
         mock_search_s2.assert_called_once()
+
+
+class TestLandslideEnricherWorldCover:
+    """The enricher should use ESA WorldCover data for land use codes."""
+
+    @patch("raster_enricher.LandslideEnricher._read_worldcover_code")
+    @patch("raster_enricher.LandslideEnricher._search_worldcover")
+    def test_enrich_point_uses_worldcover(self, mock_search_wc, mock_read_wc):
+        mock_read_wc.return_value = {"land_use_code": 4.0}
+        enricher = LandslideEnricher()
+        with patch.object(enricher, "_search_dem") as mock_dem, \
+             patch.object(enricher, "_read_dem_features") as mock_read_dem, \
+             patch.object(enricher, "_search_sentinel2") as mock_s2, \
+             patch.object(enricher, "_read_s2_features") as mock_read_s2:
+            mock_dem.return_value = {}
+            mock_read_dem.return_value = {"elevation_m": 1500.0, "slope_angle_deg": 25.0,
+                                          "aspect_deg": 180.0, "curvature": 0.0}
+            mock_s2.return_value = {}
+            mock_read_s2.return_value = {"ndvi": 0.5, "vegetation_cover_pct": 60.0}
+            result = enricher.enrich_point(lat=27.85, lon=85.55)
+
+        assert result["land_use_code"] == 4.0
+        mock_search_wc.assert_called_once()
+
+    @patch("raster_enricher.LandslideEnricher._search_worldcover")
+    def test_worldcover_fallback_to_synthetic(self, mock_search_wc):
+        mock_search_wc.side_effect = RuntimeError("WorldCover unavailable")
+        enricher = LandslideEnricher()
+        with patch.object(enricher, "_search_dem") as mock_dem, \
+             patch.object(enricher, "_read_dem_features") as mock_read_dem, \
+             patch.object(enricher, "_search_sentinel2") as mock_s2, \
+             patch.object(enricher, "_read_s2_features") as mock_read_s2:
+            mock_dem.return_value = {}
+            mock_read_dem.return_value = {"elevation_m": 1500.0, "slope_angle_deg": 25.0,
+                                          "aspect_deg": 180.0, "curvature": 0.0}
+            mock_s2.return_value = {}
+            mock_read_s2.return_value = {"ndvi": 0.5, "vegetation_cover_pct": 60.0}
+            result = enricher.enrich_point(lat=27.85, lon=85.55)
+
+        assert 1 <= result["land_use_code"] <= 5
