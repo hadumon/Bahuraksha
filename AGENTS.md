@@ -52,9 +52,9 @@ npm run ingest:rainfall  # Rainfall data ingestion
 - **Skeletons**: `PageSkeleton` component (`src/components/PageSkeleton.tsx`) with 5 layout variants (dashboard, map, list, detail, default).
 - **Error boundaries**: `PageErrorBoundary` component (`src/components/PageErrorBoundary.tsx`) wraps every route in `App.tsx` with retry + home fallback.
 
-### Dead dependencies (TanStack Start scaffolding, do not use)
+### Removed scaffolding
 
-`@tanstack/react-router`, `@tanstack/react-start`, `@tanstack/router-plugin`, `@cloudflare/vite-plugin`, `wrangler.jsonc` exist in package.json but are unused. The app is a plain Vite + React SPA. There is no SSR, no Cloudflare deployment, no TanStack Router file-routing.
+TanStack Start deps (`@tanstack/react-router`, `@tanstack/react-start`, `@tanstack/router-plugin`, `@cloudflare/vite-plugin`) and `wrangler.jsonc` were removed. `src/routes/` was never created. The app is a plain Vite + React SPA — no SSR, no Cloudflare, no TanStack Router.
 
 ### ML Pipeline
 
@@ -207,6 +207,6 @@ No E2E in CI, no Docker build in CI, no matrix builds.
 
 ### LLM Council Verdict (29 May 2026)
 
-A 5-advisor LLM council debated the CI/CD + Docker approach. Full report at `council-report-ci-cd.html`.
+A 5-advisor LLM council debated the CI/CD + Docker approach.
 
 **Consensus:** For a 7-day demo horizon, short CI and a minimal Dockerfile for the API are sufficient. Docker Compose orchestration, GHCR publishing, E2E in CI, and matrix builds are out of scope. Demo rehearsal and a pre-recorded backup video are higher leverage than infrastructure complexity.
