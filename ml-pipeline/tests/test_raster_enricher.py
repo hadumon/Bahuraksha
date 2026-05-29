@@ -94,3 +94,31 @@ class TestLandslideEnricherRealData:
         enricher = LandslideEnricher()
         result = enricher.enrich_point(lat=27.85, lon=85.55)
         assert 0 <= result["aspect_deg"] <= 360
+
+
+class TestLandslideEnricherFallback:
+    """The enricher must fall back to synthetic features when STAC is unavailable."""
+
+    @patch("raster_enricher.LandslideEnricher._search_dem")
+    def test_fallback_on_stac_failure(self, mock_search_dem):
+        mock_search_dem.side_effect = RuntimeError("STAC API unreachable")
+        enricher = LandslideEnricher()
+        result = enricher.enrich_point(lat=27.85, lon=85.55)
+        assert isinstance(result, dict)
+        assert set(result.keys()) == {
+            "slope_angle_deg", "soil_moisture_pct", "rainfall_7d_mm",
+            "rainfall_today_mm", "seismic_activity_mg", "vegetation_cover_pct",
+            "elevation_m", "distance_to_road_km", "distance_to_river_km",
+            "curvature", "aspect_deg", "ndvi", "lithology_code", "land_use_code",
+        }
+        for v in result.values():
+            assert isinstance(v, (int, float, np.floating))
+            assert np.isfinite(v)
+
+    def test_fallback_result_is_deterministic(self):
+        enricher = LandslideEnricher()
+        # Disable STAC by default — use synthetic
+        enricher.use_stac = False
+        result1 = enricher.enrich_point(lat=28.0, lon=84.5)
+        result2 = enricher.enrich_point(lat=28.0, lon=84.5)
+        assert result1 == result2
