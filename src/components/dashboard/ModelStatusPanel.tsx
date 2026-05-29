@@ -19,6 +19,7 @@ export default function ModelStatusPanel() {
   });
 
   const hasRealData = latest.data && !(latest.data as any).isMock;
+  const isMock = !hasRealData && latest.data?.isMock === true;
   const isHealthy = hasRealData || (health.data?.model_loaded === true && !health.error);
   const riskScore = latest.data?.prediction.risk_score;
 
@@ -43,7 +44,7 @@ export default function ModelStatusPanel() {
           )}
         >
           {isHealthy ? <CheckCircle2 className="h-3 w-3" /> : <AlertCircle className="h-3 w-3" />}
-          {health.isLoading ? "Checking" : isHealthy ? "Online" : "Unavailable"}
+          {health.isLoading ? "Checking" : isHealthy ? "Online" : isMock ? "Fallback" : "Unavailable"}
         </span>
       </div>
 
