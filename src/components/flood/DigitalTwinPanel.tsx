@@ -151,7 +151,7 @@ export default function DigitalTwinPanel({ stations }: { stations: any[] }) {
         <p className="text-xs text-teal-200/70 mt-1">Real-time PBR Visualization • Bagmati Basin</p>
       </div>
 
-      <div className="h-[550px] w-full bg-[#060a08]">
+      <div className="h-137.5 w-full bg-[#060a08]">
         <Canvas shadows camera={{ position: [12, 10, 15], fov: 40 }}>
           {/* Atmospheric Fog — warm dark green */}
           <fog attach="fog" args={['#060a08', 10, 40]} />

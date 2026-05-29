@@ -1,6 +1,12 @@
 {
   "version": 1,
   "skills": {
+    "claude-api": {
+      "source": "secondsky/claude-skills",
+      "sourceType": "github",
+      "skillPath": "plugins/claude-api/skills/claude-api/SKILL.md",
+      "computedHash": "a7f9860ec9c934d830dd5c99a601175517efcad04a29653a139b69312dac06d1"
+    },
     "frontend-design": {
       "source": "anthropics/claude-code",
       "sourceType": "github",
@@ -12,6 +18,12 @@
       "sourceType": "github",
       "skillPath": "SKILL.md",
       "computedHash": "4f8e9698a03f493511a53a7e87648bca4928b68018cbd6d1dd317ce38464f663"
+    },
+    "supabase": {
+      "source": "supabase/agent-skills",
+      "sourceType": "github",
+      "skillPath": "skills/supabase/SKILL.md",
+      "computedHash": "b77176bbd69eb179e1250eac478178a43f635f5f9efecb9cf196eb5482d7e8c8"
     },
     "use-my-browser": {
       "source": "xixu-me/skills",

@@ -214,7 +214,7 @@ export default function LandingPage() {
           </div>
         </section>
 
-        <section id="fall" className="relative flex min-h-[150vh] items-center justify-center px-6">
+        <section id="fall" className="relative flex min-h-[100vh] md:min-h-[150vh] items-center justify-center px-6">
           <motion.div
             style={{ opacity: fallOpacity }}
             className="sticky top-1/3 mx-auto max-w-5xl text-center"

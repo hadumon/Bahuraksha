@@ -187,8 +187,8 @@ export default function AlertsPage() {
                     <option value="warning">Warning</option>
                     <option value="evacuate">Evacuate</option>
                   </select>
-                  <span />
-                  <span />
+                  <span className="hidden md:block" />
+                  <span className="hidden md:block" />
                 </div>
                 <textarea
                   required

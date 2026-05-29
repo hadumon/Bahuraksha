@@ -129,7 +129,7 @@ export default function HecRasModelPanel() {
                 Geometry Design Cross Sections
               </h4>
             </div>
-            <div className="overflow-hidden rounded-lg border border-border/70">
+            <div className="overflow-x-auto rounded-lg border border-border/70">
               <table className="w-full text-xs">
                 <thead className="bg-secondary/50 text-muted-foreground">
                   <tr>

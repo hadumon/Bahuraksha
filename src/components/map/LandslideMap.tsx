@@ -37,6 +37,7 @@ export default function LandslideMap({ className = "" }: { className?: string })
   const mapRef = useRef<HTMLDivElement>(null);
   const mapInstanceRef = useRef<any>(null);
   const overlaysRef = useRef<any[]>([]);
+  const resizeObserverRef = useRef<ResizeObserver | null>(null);
 
   const { data: apiAvailable = false } = useQuery({
     queryKey: ["landslide-api-health"],
@@ -84,11 +85,15 @@ export default function LandslideMap({ className = "" }: { className?: string })
       L.control.scale({ imperial: false }).addTo(map);
 
       mapInstanceRef.current = map;
+      resizeObserverRef.current = new ResizeObserver(() => map.invalidateSize());
+      if (mapRef.current) resizeObserverRef.current.observe(mapRef.current);
       setTimeout(() => map.invalidateSize(), 100);
     });
 
     return () => {
       cancelled = true;
+      resizeObserverRef.current?.disconnect();
+      resizeObserverRef.current = null;
       if (mapInstanceRef.current) {
         mapInstanceRef.current.remove();
         mapInstanceRef.current = null;
@@ -182,7 +187,7 @@ export default function LandslideMap({ className = "" }: { className?: string })
       </div>
       <div
         ref={mapRef}
-        className="w-full h-full min-h-[500px]"
+        className="w-full h-full min-h-[300px] sm:min-h-[400px] md:min-h-[500px]"
         style={{ background: "hsl(220, 20%, 7%)" }}
       />
     </div>

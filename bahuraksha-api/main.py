@@ -10,6 +10,7 @@ import warnings
 from datetime import datetime, timezone
 from functools import lru_cache
 from typing import Any
+from pathlib import Path
 
 import numpy as np
 import pandas as pd
@@ -17,15 +18,19 @@ import rasterio
 from fastapi import FastAPI, HTTPException, Query, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
+from slowapi import Limiter, _rate_limit_exceeded_handler
+from slowapi.util import get_remote_address
+from slowapi.errors import RateLimitExceeded
+from pythonjsonlogger.json import JsonFormatter
 from starlette.middleware.base import BaseHTTPMiddleware
 
-from . import config
-from .satellite import (
+import config
+from satellite import (
     BAHURAKSHA_BBOX, search_stac, extract_s2_features, extract_s1_features,
     compute_change_indices, build_feature_vector, get_dem_features,
     CLASS_LABELS, CLASS_COLORS,
 )
-from .csv_models import (
+from csv_models import (
     _load_model_bundle, _model_version, _build_feature_row, _risk_level,
     load_daily_rainfall, load_daily_discharge, load_daily_sar,
     zone_static_features,
@@ -36,11 +41,18 @@ from .csv_models import (
 )
 
 warnings.filterwarnings("ignore", category=rasterio.errors.NotGeoreferencedWarning)
-logging.basicConfig(level=logging.INFO)
+log_handler = logging.StreamHandler()
+log_handler.setFormatter(JsonFormatter(fmt="%(asctime)s %(name)s %(levelname)s %(message)s"))
+logging.basicConfig(level=logging.INFO, handlers=[log_handler])
 log = logging.getLogger("bahuraksha")
 
 app = FastAPI(title="Bahuraksha Early Warning System", version="1.0.0")
 app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_methods=["*"], allow_headers=["*"])
+
+RATE_LIMIT = os.getenv("BAHURAKSHA_RATE_LIMIT", "30/minute")
+limiter = Limiter(key_func=get_remote_address, default_limits=[RATE_LIMIT])
+app.state.limiter = limiter
+app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 
 FLOOD_MODEL_PATH = config.MODELS_DIR / "flood_model.pkl"
 LANDSLIDE_MODEL_PATH = config.MODELS_DIR / "landslide_model.pkl"
@@ -103,12 +115,14 @@ except Exception as e:
 
 
 @app.get("/")
-def root():
+@limiter.limit("60/minute")
+def root(request: Request):
     return {"project": "Bahuraksha Early Warning System", "status": "online", "docs": "/docs"}
 
 
 @app.get("/health")
-def health() -> dict[str, Any]:
+@limiter.limit("60/minute")
+def health(request: Request) -> dict[str, Any]:
     return {
         "status": "healthy" if (flood_bundle and landslide_bundle) else "model_missing",
         "flood_model": flood_bundle["model_name"] if flood_bundle else None,
@@ -117,14 +131,16 @@ def health() -> dict[str, Any]:
 
 
 @app.get("/ready")
-def ready():
+@limiter.limit("60/minute")
+def ready(request: Request):
     if not flood_bundle or not landslide_bundle:
         raise HTTPException(status_code=503, detail="Models not loaded")
     return {"status": "ready", "flood_model_loaded": True, "landslide_model_loaded": True}
 
 
 @app.get("/version")
-def version() -> dict[str, Any]:
+@limiter.limit("60/minute")
+def version(request: Request) -> dict[str, Any]:
     return {
         "api_version": app.version,
         "flood_model": _model_version(FLOOD_MODEL_PATH, str(flood_bundle["model_name"])) if flood_bundle else None,
@@ -135,7 +151,8 @@ def version() -> dict[str, Any]:
 
 
 @app.post("/predict/flood", response_model=PredictResponse)
-def predict_flood(payload: FloodPredictRequest) -> PredictResponse:
+@limiter.limit("20/minute")
+def predict_flood(request: Request, payload: FloodPredictRequest) -> PredictResponse:
     if not flood_bundle:
         raise HTTPException(status_code=503, detail="Flood model not loaded")
     features = _build_feature_row(payload.model_dump(), flood_bundle["feature_columns"])
@@ -150,7 +167,8 @@ def predict_flood(payload: FloodPredictRequest) -> PredictResponse:
 
 
 @app.post("/predict/landslide", response_model=PredictResponse)
-def predict_landslide(payload: LandslidePredictRequest) -> PredictResponse:
+@limiter.limit("20/minute")
+def predict_landslide(request: Request, payload: LandslidePredictRequest) -> PredictResponse:
     if not landslide_bundle:
         raise HTTPException(status_code=503, detail="Landslide model not loaded")
     features = _build_feature_row(payload.model_dump(), landslide_bundle["feature_columns"])
@@ -165,7 +183,9 @@ def predict_landslide(payload: LandslidePredictRequest) -> PredictResponse:
 
 
 @app.get("/risk/zones")
+@limiter.limit("30/minute")
 def risk_zones(
+    request: Request,
     flood_prob: float = Query(..., ge=0.0, le=1.0),
     landslide_prob: float = Query(..., ge=0.0, le=1.0),
     rainfall_score: float = Query(..., ge=0.0, le=1.0),
@@ -181,7 +201,8 @@ def risk_zones(
 
 
 @app.post("/ingest/satellite")
-def ingest_satellite(payload: SatelliteIngestRequest) -> dict[str, Any]:
+@limiter.limit("5/minute")
+def ingest_satellite(request: Request, payload: SatelliteIngestRequest) -> dict[str, Any]:
     config.RAW_SENTINEL.mkdir(parents=True, exist_ok=True)
     out_path = config.RAW_SENTINEL / "satellite_ingest_log.jsonl"
     written = 0
@@ -197,7 +218,8 @@ def ingest_satellite(payload: SatelliteIngestRequest) -> dict[str, Any]:
 
 
 @app.get("/risk/zones/live", response_model=LiveZoneRiskResponse)
-def risk_zones_live(date: str | None = Query(None, description="Optional target date (YYYY-MM-DD).")) -> LiveZoneRiskResponse:
+@limiter.limit("20/minute")
+def risk_zones_live(request: Request, date: str | None = Query(None, description="Optional target date (YYYY-MM-DD).")) -> LiveZoneRiskResponse:
     ck = cache_key("risk_zones_live", date)
     hit = cached(ck)
     if hit is not None:
@@ -295,7 +317,8 @@ def risk_zones_live(date: str | None = Query(None, description="Optional target 
 
 
 @app.post("/debug/features")
-def debug_features(date: str, bbox: list | None = None, lookback_days: int = 60, cloud_max: int = 80):
+@limiter.limit("10/minute")
+def debug_features(request: Request, date: str, bbox: list | None = None, lookback_days: int = 60, cloud_max: int = 80):
     bbox = bbox or BAHURAKSHA_BBOX
     s2_item = search_stac("sentinel-2-l2a", bbox, date, lookback_days, cloud_max)
     s1_item = search_stac("sentinel-1-grd", bbox, date, lookback_days)
@@ -308,10 +331,48 @@ def debug_features(date: str, bbox: list | None = None, lookback_days: int = 60,
 
 
 @app.get("/debug")
-def debug() -> dict[str, Any]:
+@limiter.limit("10/minute")
+def debug(request: Request) -> dict[str, Any]:
     cwd = os.getcwd()
     return {
         "cwd": cwd, "files": os.listdir(cwd),
         "flood_model_loaded": flood_bundle is not None,
         "landslide_model_loaded": landslide_bundle is not None,
+    }
+
+
+@app.get("/debug/info")
+@limiter.limit("10/minute")
+def debug_info(request: Request) -> dict[str, Any]:
+    def _file_info(path: Path) -> dict[str, Any] | None:
+        if not path.exists():
+            return None
+        mtime = datetime.fromtimestamp(path.stat().st_mtime, tz=timezone.utc)
+        return {
+            "path": str(path.relative_to(config.ROOT)),
+            "size_bytes": path.stat().st_size,
+            "last_modified_utc": mtime.isoformat(),
+            "age_hours": round((datetime.now(timezone.utc) - mtime).total_seconds() / 3600, 2),
+        }
+
+    csv_files = list(config.RAW_RAINFALL.glob("*.csv")) + list(config.RAW_DISCHARGE.glob("*.csv")) + list(config.RAW_SENTINEL.glob("*.csv"))
+    dem_files = list(config.RAW_DEM.rglob("*"))
+    landuse_files = list(config.RAW_LANDUSE.rglob("*"))
+
+    return {
+        "models": {
+            "flood": _model_version(FLOOD_MODEL_PATH, str(flood_bundle["model_name"])) if flood_bundle else None,
+            "landslide": _model_version(LANDSLIDE_MODEL_PATH, str(landslide_bundle["model_name"])) if landslide_bundle else None,
+        },
+        "csv_data": {
+            "total_files": len(csv_files),
+            "files": [_file_info(f) for f in sorted(csv_files)[:20]],
+            "data_dir_size_mb": round(sum(f.stat().st_size for f in csv_files) / 1e6, 2),
+        },
+        "dem_data": {str(f.relative_to(config.ROOT)): _file_info(f) for f in sorted(dem_files) if f.is_file()},
+        "landuse_data": {str(f.relative_to(config.ROOT)): _file_info(f) for f in sorted(landuse_files) if f.is_file()},
+        "cache_entries": len(_cache),
+        "rate_limit": RATE_LIMIT,
+        "api_key_enabled": bool(API_KEY),
+        "cache_ttl_seconds": CACHE_TTL,
     }

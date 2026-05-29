@@ -109,13 +109,13 @@ export default function MonitoringPage() {
                       />
                     </div>
 
-                    <div className="flex justify-between mt-2">
-                      <span className="text-[10px] text-muted-foreground">0m</span>
-                      <span className="text-[10px] text-risk-warning">
-                        Warn: {station.warningLevel}m
+                    <div className="flex justify-between mt-2 gap-1">
+                      <span className="text-[9px] sm:text-[10px] text-muted-foreground shrink-0">0m</span>
+                      <span className="text-[9px] sm:text-[10px] text-risk-warning truncate">
+                        W:{station.warningLevel}m
                       </span>
-                      <span className="text-[10px] text-risk-evacuate">
-                        Danger: {station.dangerLevel}m
+                      <span className="text-[9px] sm:text-[10px] text-risk-evacuate truncate">
+                        D:{station.dangerLevel}m
                       </span>
                     </div>
                   </div>

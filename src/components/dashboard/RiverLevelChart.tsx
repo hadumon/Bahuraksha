@@ -21,7 +21,7 @@ export default function RiverLevelChart() {
   const hasData = data.length > 0;
 
   return (
-    <div className="rounded-2xl border border-border/50 bg-gradient-to-br from-card via-card to-secondary/10 p-5 shadow-card overflow-hidden relative">
+    <div className="rounded-2xl border border-border/50 bg-linear-to-br from-card via-card to-secondary/10 p-5 shadow-card overflow-hidden relative">
       {/* Subtle ambient glow */}
       <div className="pointer-events-none absolute -top-20 -right-20 h-60 w-60 rounded-full bg-primary/5 blur-3xl" />
 
@@ -54,7 +54,7 @@ export default function RiverLevelChart() {
         </div>
 
         <ResponsiveContainer width="100%" height={280}>
-          <ComposedChart data={data} margin={{ top: 10, right: 10, left: -10, bottom: 0 }}>
+          <ComposedChart data={data} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
             <defs>
               <linearGradient id="actualGradient" x1="0" y1="0" x2="0" y2="1">
                 <stop offset="5%" stopColor="hsl(172, 66%, 50%)" stopOpacity={0.35} />

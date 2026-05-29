@@ -13,7 +13,7 @@ import pandas as pd
 from fastapi import HTTPException
 from pydantic import BaseModel, Field
 
-from . import config
+import config
 
 BAGMATI_ZONES = [
     {"id": "z-1", "name": "Kathmandu Metro", "district": "Kathmandu", "lat": 27.7172, "lon": 85.3240, "population": 1442271},

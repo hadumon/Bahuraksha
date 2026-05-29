@@ -186,7 +186,7 @@ export default function Index() {
           className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 pb-4 border-b border-border/50"
         >
           <div className="flex items-center gap-4">
-            <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-gradient-to-br from-ocean-400 to-ocean-600 shadow-glow">
+            <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-linear-to-br from-ocean-400 to-ocean-600 shadow-glow">
               <Shield className="h-6 w-6 text-white" />
             </div>
             <div>
@@ -225,7 +225,7 @@ export default function Index() {
         {/* Stats row */}
         <motion.div
           variants={itemVariants}
-          className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-7 gap-4"
+          className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-7 gap-4"
         >
           <StatCard
             title="Active Alerts"

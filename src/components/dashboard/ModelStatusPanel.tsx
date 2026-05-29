@@ -48,7 +48,7 @@ export default function ModelStatusPanel() {
       </div>
 
       {latest.data?.prediction ? (
-        <div className="grid grid-cols-3 gap-3">
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
           <Metric label="Class" value={latest.data.prediction.label.replaceAll("_", " ")} />
           <Metric label="Risk" value={`${riskScore?.toFixed(1) ?? "—"}/100`} />
           <Metric

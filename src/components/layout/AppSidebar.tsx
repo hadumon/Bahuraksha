@@ -128,11 +128,11 @@ export default function AppSidebar({ isMobile, mobileOpen, onClose }: Props) {
               className="fixed inset-0 bg-background/80 backdrop-blur-sm z-40"
             />
             <motion.aside
-              initial={{ x: -280 }}
+              initial={{ x: -260 }}
               animate={{ x: 0 }}
-              exit={{ x: -280 }}
+              exit={{ x: -260 }}
               transition={{ duration: 0.3, ease: [0.4, 0, 0.2, 1] }}
-              className="fixed left-0 top-0 h-screen w-[280px] bg-sidebar border-r border-sidebar-border z-50 flex flex-col"
+              className="fixed left-0 top-0 h-screen w-[260px] bg-sidebar border-r border-sidebar-border z-50 flex flex-col"
             >
               {sidebar}
             </motion.aside>

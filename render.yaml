@@ -9,7 +9,7 @@ services:
       pip install -r bahuraksha-api/requirements.txt
 
     startCommand: |
-      uvicorn bahuraksha-api.main:app --host 0.0.0.0 --port 10000
+      cd bahuraksha-api && uvicorn main:app --host 0.0.0.0 --port 10000
 
     envVars:
       - key: PYTHON_VERSION

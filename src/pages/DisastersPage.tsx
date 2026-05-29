@@ -110,9 +110,9 @@ export default function DisastersPage() {
               <motion.div
                 key={index}
                 variants={fadeInUp}
-                className="group relative rounded-3xl p-8 border border-border/50 bg-gradient-to-br from-card to-secondary/30 hover:border-ocean-400/50 transition-all duration-300 overflow-hidden hover:shadow-elevated"
+                className="group relative rounded-3xl p-8 border border-border/50 bg-linear-to-br from-card to-secondary/30 hover:border-ocean-400/50 transition-all duration-300 overflow-hidden hover:shadow-elevated"
               >
-                <div className={cn("absolute inset-0 bg-gradient-to-br opacity-0 group-hover:opacity-5 transition-opacity", disaster.color)} />
+                <div className={cn("absolute inset-0 bg-linear-to-br opacity-0 group-hover:opacity-5 transition-opacity", disaster.color)} />
                 
                 <div className="flex flex-col sm:flex-row gap-6 relative">
                   <div className={cn("w-16 h-16 rounded-2xl flex items-center justify-center shrink-0", disaster.iconBg)}>

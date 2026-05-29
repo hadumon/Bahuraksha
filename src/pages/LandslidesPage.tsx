@@ -263,7 +263,7 @@ export default function LandslidesPage() {
             <h3 className="text-lg font-bold text-foreground mb-1">Risk vs Soil Saturation</h3>
             <p className="text-sm text-muted-foreground mb-6">7-day forecast for {activeZone?.name ?? "N/A"}</p>
             
-            <div className="h-[300px] w-full">
+            <div className="h-[200px] sm:h-[250px] md:h-75 w-full">
               <ResponsiveContainer width="100%" height="100%">
                 <AreaChart data={predictionData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
                   <defs>
