@@ -7,9 +7,11 @@ sys.path.insert(0, str(Path(__file__).parent.parent))
 
 import pytest
 import numpy as np
+import pandas as pd
 from unittest.mock import patch, MagicMock
 
 from raster_enricher import LandslideEnricher
+from ingest_real_data import enrich_with_environmental_features
 
 
 class TestLandslideEnricherSchema:
@@ -248,3 +250,36 @@ class TestLandslideEnricherWorldCover:
             result = enricher.enrich_point(lat=27.85, lon=85.55)
 
         assert 1 <= result["land_use_code"] <= 5
+
+
+class TestEnrichWithEnvironmentalFeatures:
+    """enrich_with_environmental_features should accept an enricher."""
+
+    def test_accepts_enricher_parameter(self):
+        """Function signature should accept an optional enricher."""
+        df = pd.DataFrame({"latitude": [27.85, 28.0], "longitude": [85.55, 84.5]})
+        enricher = LandslideEnricher(use_stac=False)
+        result = enrich_with_environmental_features(df, enricher=enricher)
+        for col in LandslideEnricher.FEATURE_KEYS:
+            assert col in result.columns, f"Missing column: {col}"
+
+    def test_produces_deterministic_results(self):
+        """With a deterministic enricher, repeated calls should match."""
+        df = pd.DataFrame({"latitude": [27.85, 28.0], "longitude": [85.55, 84.5]})
+        enricher = LandslideEnricher(use_stac=False)
+        r1 = enrich_with_environmental_features(df.copy(), enricher=enricher)
+        r2 = enrich_with_environmental_features(df.copy(), enricher=enricher)
+        pd.testing.assert_frame_equal(r1, r2)
+
+    def test_preserves_input_columns(self):
+        """Input columns (latitude, longitude) should survive enrichment."""
+        df = pd.DataFrame({
+            "latitude": [27.85, 28.0],
+            "longitude": [85.55, 84.5],
+            "target": [1, 0],
+        })
+        enricher = LandslideEnricher(use_stac=False)
+        result = enrich_with_environmental_features(df, enricher=enricher)
+        assert "latitude" in result.columns
+        assert "longitude" in result.columns
+        assert "target" in result.columns

@@ -18,6 +18,8 @@ from pathlib import Path
 
 import numpy as np
 import pandas as pd
+
+from raster_enricher import LandslideEnricher
 from scipy.spatial import cKDTree
 
 from config import FEATURES
@@ -166,22 +168,22 @@ def generate_negative_samples(
 def enrich_with_environmental_features(
     df: pd.DataFrame,
     feature_datasets: dict[str, pd.DataFrame] | None = None,
+    enricher: "LandslideEnricher | None" = None,
 ) -> pd.DataFrame:
     """
     Enrich landslide points with environmental features from raster datasets.
 
-    In production, this would query:
-    - SRTM/ALOS DEM for slope, elevation, curvature, aspect
-    - CHIRPS/GPM for rainfall
-    - MODIS/Landsat for NDVI, land cover
-    - Geological maps for lithology
-    - Road network for distance to roads
-    - Hydrography for distance to rivers
-
-    For now, uses synthetic interpolation based on location.
+    Uses the LandslideEnricher when available (real STAC data with fallback),
+    otherwise falls back to vectorized synthetic interpolation.
     """
-    rng = np.random.default_rng(42)
+    if enricher is not None:
+        points = df[["latitude", "longitude"]].to_dict(orient="records")
+        enriched = enricher.enrich_batch(points)
+        for col in enricher.FEATURE_KEYS:
+            df[col] = enriched[col].values
+        return df
 
+    rng = np.random.default_rng(42)
     lat = df["latitude"].values
     lon = df["longitude"].values
 
