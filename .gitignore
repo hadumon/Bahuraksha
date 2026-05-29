@@ -118,6 +118,11 @@ temp/
 docs/explanation.md
 
 # =========================
+# COUNCIL REPORTS
+# =========================
+council-report-*.html
+
+# =========================
 # AGENTS / WORKSPACE CONFIG
 # =========================
 .agents/
