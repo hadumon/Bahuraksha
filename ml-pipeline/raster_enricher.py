@@ -16,6 +16,7 @@ log = logging.getLogger("raster_enricher")
 
 EARTH_SEARCH = "https://earth-search.aws.element84.com/v1/search"
 DEM_COLLECTION = "cop-dem-glo-30"
+SENTINEL2_COLLECTION = "sentinel-2-l2a"
 
 
 class LandslideEnricher:
@@ -116,6 +117,86 @@ class LandslideEnricher:
         }
 
     # ------------------------------------------------------------------
+    # STAC Sentinel-2 queries
+    # ------------------------------------------------------------------
+
+    def _search_sentinel2(self, lat: float, lon: float) -> dict:
+        """Query Earth Search for a Sentinel-2 L2A scene covering (lat, lon)."""
+        bbox = [lon - 0.02, lat - 0.02, lon + 0.02, lat + 0.02]
+        target = "2024-10-01"
+        dt = datetime.strptime(target, "%Y-%m-%d")
+        date_from = (dt - timedelta(days=120)).strftime("%Y-%m-%dT00:00:00Z")
+        date_to = dt.strftime("%Y-%m-%dT23:59:59Z")
+
+        body = {
+            "collections": [SENTINEL2_COLLECTION],
+            "bbox": bbox,
+            "datetime": f"{date_from}/{date_to}",
+            "limit": 1,
+            "query": {"eo:cloud_cover": {"lt": 80}},
+        }
+        res = requests.post(EARTH_SEARCH, json=body, timeout=20)
+        res.raise_for_status()
+        features = res.json().get("features", [])
+        if not features:
+            raise RuntimeError(f"No Sentinel-2 scene found for ({lat}, {lon})")
+        return features[0]
+
+    @staticmethod
+    def _read_s2_features(item: dict, lat: float, lon: float) -> dict[str, float]:
+        """Read Red and NIR bands from a Sentinel-2 asset and compute NDVI."""
+        assets = item.get("assets", {})
+
+        def get_href(key: str) -> str | None:
+            if key in assets:
+                return assets[key]["href"]
+            if key.lower() in assets:
+                return assets[key.lower()]["href"]
+            return None
+
+        def read_band_mean(href: str | None) -> float:
+            if href is None:
+                raise RuntimeError("Band asset missing")
+            bbox = [lon - 0.01, lat - 0.01, lon + 0.01, lat + 0.01]
+            west, south, east, north = bbox
+            with rasterio.open(href) as src:
+                if src.crs != CRS.from_epsg(4326):
+                    left, bottom, right, top = transform_bounds(
+                        "EPSG:4326", src.crs, west, south, east, north
+                    )
+                else:
+                    left, bottom, right, top = west, south, east, north
+                window = from_bounds(left, bottom, right, top, src.transform)
+                data = src.read(1, window=window, out_shape=(1, 32, 32),
+                                resampling=rasterio.enums.Resampling.average, masked=True)
+                valid = data.compressed()
+                if len(valid) == 0:
+                    raise RuntimeError("No valid S2 pixels")
+                return float(np.mean(valid))
+
+        red_href = get_href("red")
+        nir_href = get_href("nir")
+
+        raw_red = read_band_mean(red_href)
+        raw_nir = read_band_mean(nir_href)
+
+        def scale(v: float) -> float:
+            return v / 10000.0 if v > 1 else v
+
+        red = scale(raw_red)
+        nir = scale(raw_nir)
+
+        if red + nir == 0:
+            ndvi = 0.0
+        else:
+            ndvi = (nir - red) / (nir + red)
+
+        ndvi = float(np.clip(ndvi, -1, 1))
+        vegetation_cover_pct = float(np.clip((ndvi + 1) / 2 * 100, 5, 95))
+
+        return {"ndvi": round(ndvi, 4), "vegetation_cover_pct": round(vegetation_cover_pct, 1)}
+
+    # ------------------------------------------------------------------
     # Fallback: geographically correlated synthetic features
     # ------------------------------------------------------------------
 
@@ -163,12 +244,18 @@ class LandslideEnricher:
             try:
                 dem_item = self._search_dem(lat, lon)
                 dem_features = self._read_dem_features(dem_item, lat, lon)
+                s2_features = self._read_s2_features(
+                    self._search_sentinel2(lat, lon), lat, lon
+                )
                 synthetic = self._geographically_correlated_features(lat, lon)
-                result = {**synthetic, **dem_features}
+                result = {**synthetic, **dem_features, **s2_features}
                 self._point_cache[cache_key] = dict(result)
                 return result
             except Exception as exc:
-                log.warning("STAC DEM failed for (%.4f, %.4f): %s, using fallback", lat, lon, exc)
+                log.warning(
+                    "STAC fetch failed for (%.4f, %.4f): %s, using fallback",
+                    lat, lon, exc,
+                )
 
         result = self._geographically_correlated_features(lat, lon)
         self._point_cache[cache_key] = dict(result)

@@ -122,3 +122,78 @@ class TestLandslideEnricherFallback:
         result1 = enricher.enrich_point(lat=28.0, lon=84.5)
         result2 = enricher.enrich_point(lat=28.0, lon=84.5)
         assert result1 == result2
+
+
+class TestLandslideEnricherSentinel2:
+    """The enricher should use Sentinel-2 data for NDVI and vegetation cover."""
+
+    @staticmethod
+    def _make_mock_s2_item(red_val: float = 0.2, nir_val: float = 0.6):
+        """Create a mock Sentinel-2 STAC item with known band values."""
+        import json
+        item = {
+            "assets": {
+                "red": {"href": f"https://mock/s2/red_{red_val}.tif"},
+                "nir": {"href": f"https://mock/s2/nir_{nir_val}.tif"},
+            },
+            "properties": {
+                "datetime": "2024-06-01T00:00:00Z",
+                "eo:cloud_cover": 10,
+            },
+        }
+        return item
+
+    @patch("raster_enricher.LandslideEnricher._search_sentinel2")
+    @patch("raster_enricher.LandslideEnricher._read_s2_features")
+    def test_enrich_point_uses_sentinel2_ndvi(self, mock_read_s2, mock_search_s2):
+        """When S2 is available, enrich_point should use real NDVI."""
+        mock_read_s2.return_value = {"ndvi": 0.65, "vegetation_cover_pct": 72.0}
+        enricher = LandslideEnricher()
+        # Mock DEM to succeed too
+        with patch.object(enricher, "_search_dem") as mock_dem, \
+             patch.object(enricher, "_read_dem_features") as mock_read_dem:
+            mock_dem.return_value = {}
+            mock_read_dem.return_value = {
+                "elevation_m": 1500.0, "slope_angle_deg": 25.0,
+                "aspect_deg": 180.0, "curvature": 0.0,
+            }
+            result = enricher.enrich_point(lat=27.85, lon=85.55)
+
+        assert result["ndvi"] == 0.65
+        assert result["vegetation_cover_pct"] == 72.0
+        mock_search_s2.assert_called_once()
+
+    @patch("raster_enricher.LandslideEnricher._search_sentinel2")
+    def test_sentinel2_fallback_to_synthetic(self, mock_search_s2):
+        """When S2 is unavailable, enricher falls back to synthetic NDVI."""
+        mock_search_s2.side_effect = RuntimeError("S2 unavailable")
+        enricher = LandslideEnricher()
+        with patch.object(enricher, "_search_dem") as mock_dem, \
+             patch.object(enricher, "_read_dem_features") as mock_read_dem:
+            mock_dem.return_value = {}
+            mock_read_dem.return_value = {
+                "elevation_m": 1500.0, "slope_angle_deg": 25.0,
+                "aspect_deg": 180.0, "curvature": 0.0,
+            }
+            result = enricher.enrich_point(lat=27.85, lon=85.55)
+
+        assert 0.0 <= result["ndvi"] <= 1.0
+        assert 5 <= result["vegetation_cover_pct"] <= 95
+
+    @patch("raster_enricher.LandslideEnricher._search_sentinel2")
+    @patch("raster_enricher.LandslideEnricher._read_s2_features")
+    def test_sentinel2_ndvi_is_cached(self, mock_read_s2, mock_search_s2):
+        """Caching should prevent redundant S2 queries for the same point."""
+        mock_read_s2.return_value = {"ndvi": 0.65, "vegetation_cover_pct": 72.0}
+        enricher = LandslideEnricher()
+        with patch.object(enricher, "_search_dem") as mock_dem, \
+             patch.object(enricher, "_read_dem_features") as mock_read_dem:
+            mock_dem.return_value = {}
+            mock_read_dem.return_value = {
+                "elevation_m": 1500.0, "slope_angle_deg": 25.0,
+                "aspect_deg": 180.0, "curvature": 0.0,
+            }
+            enricher.enrich_point(lat=27.85, lon=85.55)
+            enricher.enrich_point(lat=27.85, lon=85.55)
+
+        mock_search_s2.assert_called_once()
