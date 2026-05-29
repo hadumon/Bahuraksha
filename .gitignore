@@ -100,6 +100,18 @@ Thumbs.db
 # =========================
 coverage/
 .pytest_cache/
+playwright-report/
+test-results/
+
+# =========================
+# TYPESCRIPT BUILD
+# =========================
+tsconfig.tsbuildinfo
+
+# =========================
+# SUPABASE LOCAL
+# =========================
+supabase/.temp/
 
 # =========================
 # TURBOPACK / NEXT / VITE
