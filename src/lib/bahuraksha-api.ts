@@ -188,3 +188,38 @@ export async function getReady(): Promise<ReadyResponse> {
 export async function getVersion(): Promise<VersionResponse> {
   return apiFetch<VersionResponse>("/version");
 }
+
+export interface WhatsAppNotificationRequest {
+  zone: string;
+  title: string;
+  message: string;
+  severity: "safe" | "watch" | "warning" | "evacuate";
+}
+
+export interface WhatsAppNotificationResponse {
+  status: "sent" | "simulated";
+  recipients: number;
+  severity: string;
+  zone: string;
+  note?: string;
+}
+
+export async function sendWhatsAppAlert(
+  payload: WhatsAppNotificationRequest,
+): Promise<WhatsAppNotificationResponse> {
+  try {
+    return await apiFetch<WhatsAppNotificationResponse>("/notify/whatsapp", {
+      method: "POST",
+      body: JSON.stringify(payload),
+    });
+  } catch (error) {
+    console.warn("WhatsApp API unreachable, simulating notification.", error);
+    return {
+      status: "simulated",
+      recipients: 45,
+      severity: payload.severity,
+      zone: payload.zone,
+      note: "Backend unreachable — alert logged locally",
+    };
+  }
+}

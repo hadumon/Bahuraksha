@@ -18,6 +18,7 @@ import rasterio
 from fastapi import FastAPI, HTTPException, Query, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
+from pydantic import BaseModel, Field
 from slowapi import Limiter, _rate_limit_exceeded_handler
 from slowapi.util import get_remote_address
 from slowapi.errors import RateLimitExceeded
@@ -25,6 +26,7 @@ from pythonjsonlogger.json import JsonFormatter
 from starlette.middleware.base import BaseHTTPMiddleware
 
 import config
+from notifications import send_whatsapp_alert
 from satellite import (
     BAHURAKSHA_BBOX, search_stac, extract_s2_features, extract_s1_features,
     compute_change_indices, build_feature_vector, get_dem_features,
@@ -376,3 +378,26 @@ def debug_info(request: Request) -> dict[str, Any]:
         "api_key_enabled": bool(API_KEY),
         "cache_ttl_seconds": CACHE_TTL,
     }
+
+
+class WhatsAppNotificationRequest(BaseModel):
+    zone: str = Field(..., description="Affected zone name")
+    title: str = Field(..., max_length=200, description="Alert title")
+    message: str = Field(..., max_length=1000, description="Alert body text")
+    severity: str = Field(default="watch", pattern=r"^(safe|watch|warning|evacuate)$")
+
+
+@app.post("/notify/whatsapp", response_model=dict)
+@limiter.limit("20/minute")
+def notify_whatsapp(request: Request, payload: WhatsAppNotificationRequest) -> dict:
+    """Send a WhatsApp alert via Twilio (or simulated fallback)."""
+    result = send_whatsapp_alert(
+        title=payload.title,
+        message=payload.message,
+        zone=payload.zone,
+        severity=payload.severity,
+    )
+    result["severity"] = payload.severity
+    result["zone"] = payload.zone
+    log.info("WhatsApp notification: %s", result)
+    return result

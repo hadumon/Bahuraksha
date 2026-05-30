@@ -5,6 +5,7 @@ import AlertFeed from "@/components/dashboard/AlertFeed";
 import RiskLevelBadge from "@/components/dashboard/RiskLevelBadge";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import { sendWhatsAppAlert } from "@/lib/bahuraksha-api";
 import { Droplets, Mountain, AlertTriangle, Bell, BellOff, Inbox } from "lucide-react";
 
 const typeIcons = { flood: Droplets, landslide: Mountain, glof: AlertTriangle };
@@ -94,15 +95,34 @@ export default function AlertsPage() {
     if (error) {
       console.error("Cannot insert alert", error);
       toast.error("Failed to create alert", { description: error.message });
-    } else {
-      setFormState({
-        title: "",
-        message: "",
-        zone: "",
-        type: "flood",
-        severity: "watch",
+      return;
+    }
+
+    setFormState({
+      title: "",
+      message: "",
+      zone: "",
+      type: "flood",
+      severity: "watch",
+    });
+    queryClient.invalidateQueries({ queryKey: ["alerts"] });
+
+    const wa = await sendWhatsAppAlert({
+      zone: newAlert.zone,
+      title: newAlert.title,
+      message: newAlert.message,
+      severity: newAlert.severity,
+    });
+
+    if (wa.status === "sent") {
+      toast.success("WhatsApp alert sent", {
+        description: `${wa.recipients} recipient(s) notified for ${newAlert.zone}`,
       });
-      queryClient.invalidateQueries({ queryKey: ["alerts"] });
+    } else {
+      toast("WhatsApp alert simulated", {
+        description: wa.note ?? "Twilio not configured — alert logged",
+        icon: "📱",
+      });
     }
   };
 
