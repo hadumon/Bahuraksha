@@ -37,16 +37,16 @@ export interface HealthResponse {
 
 export interface ReadyResponse {
   status: "ready";
-  model_loaded: boolean;
-  feature_count: number;
+  flood_model_loaded: boolean;
+  landslide_model_loaded: boolean;
 }
 
 export interface VersionResponse {
   api_version: string;
-  model_path: string;
-  model_loaded: boolean;
-  xgboost_version: string;
-  feature_schema: string[];
+  flood_model: string | null;
+  landslide_model: string | null;
+  flood_threshold: number | null;
+  landslide_threshold: number | null;
 }
 
 // ── Config ────────────────────────────────────────────────────────────────────
@@ -82,7 +82,7 @@ export const RISK_COLOR: Record<ReturnType<typeof RISK_LEVEL>, string> = {
 
 async function apiFetch<T>(path: string, options?: RequestInit): Promise<T> {
   const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort(), 10000);
+  const timeout = setTimeout(() => controller.abort(), 30000);
   const res = await fetch(`${API_BASE}${path}`, {
     headers: { "Content-Type": "application/json" },
     signal: controller.signal,
@@ -112,21 +112,6 @@ export async function getLatest(): Promise<PredictionResponse> {
  * @param lookbackDays - How many days back to search for satellite scenes (default 60)
  * @param cloudMax - Max cloud cover % (default 80)
  */
-export async function getPrediction(
-  date: string,
-  lookbackDays: number = 60,
-  cloudMax: number = 80,
-): Promise<PredictionResponse> {
-  return apiFetch<PredictionResponse>("/predict", {
-    method: "POST",
-    body: JSON.stringify({
-      date,
-      lookback_days: lookbackDays,
-      cloud_max: cloudMax,
-    }),
-  });
-}
-
 /**
  * Get predictions for the last N days.
  * Use this for your time-series chart or history table.

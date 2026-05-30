@@ -106,6 +106,7 @@ def _distance_m(lat1: float, lon1: float, lat2: float, lon2: float) -> float:
 
 
 @lru_cache(maxsize=1)
+@lru_cache(maxsize=1)
 def load_daily_rainfall() -> pd.DataFrame:
     csv_path = config.RAW_RAINFALL / "gpm_bagmati_daily.csv"
     if not csv_path.exists():
