@@ -35,20 +35,6 @@ export interface HealthResponse {
   model_type: string;
 }
 
-export interface ReadyResponse {
-  status: "ready";
-  flood_model_loaded: boolean;
-  landslide_model_loaded: boolean;
-}
-
-export interface VersionResponse {
-  api_version: string;
-  flood_model: string | null;
-  landslide_model: string | null;
-  flood_threshold: number | null;
-  landslide_threshold: number | null;
-}
-
 // ── Config ────────────────────────────────────────────────────────────────────
 
 const API_BASE = "https://bahuraksha.onrender.com";
@@ -127,14 +113,6 @@ export async function getHistory(days: number = 7): Promise<HistoryResponse> {
  */
 export async function getHealth(): Promise<HealthResponse> {
   return apiFetch<HealthResponse>("/health");
-}
-
-export async function getReady(): Promise<ReadyResponse> {
-  return apiFetch<ReadyResponse>("/ready");
-}
-
-export async function getVersion(): Promise<VersionResponse> {
-  return apiFetch<VersionResponse>("/version");
 }
 
 export interface WhatsAppNotificationRequest {

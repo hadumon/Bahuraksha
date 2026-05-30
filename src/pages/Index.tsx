@@ -27,7 +27,7 @@ import {
 import ModelStatusPanel from "@/components/dashboard/ModelStatusPanel";
 import RiskExplanationPanel from "@/components/dashboard/RiskExplanationPanel";
 import { computeCompositeRiskZones, normalizeRainfallForecasts } from "@/lib/riskEngine";
-import { getLatest, getHistory } from "../lib/bahuraksha-api.ts";
+import { getLatest, getHistory } from "@/lib/bahuraksha-api";
 import { predictBatchLandslideRisk, checkApiHealth } from "@/lib/landslideModel";
 import {
   LineChart,

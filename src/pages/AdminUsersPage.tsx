@@ -47,7 +47,6 @@ export default function AdminUsersPage() {
         .select("*")
         .order("created_at", { ascending: false });
       if (error) {
-        console.error("Failed to load profiles:", error);
         toast.error("Failed to load users", { description: error.message });
         return;
       }

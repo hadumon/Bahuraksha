@@ -93,7 +93,6 @@ export default function AlertsPage() {
 
     const { error } = await supabase.from("alerts").insert(newAlert);
     if (error) {
-      console.error("Cannot insert alert", error);
       toast.error("Failed to create alert", { description: error.message });
       return;
     }

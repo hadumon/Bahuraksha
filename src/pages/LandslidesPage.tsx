@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo } from "react";
 import AppLayout from "@/components/layout/AppLayout";
 import { Mountain, AlertTriangle, CloudRain, Activity, MapPin, ChevronRight, Wind, Loader2 } from "lucide-react";
 import { Area, AreaChart, ResponsiveContainer, Tooltip, XAxis, YAxis, CartesianGrid } from "recharts";
