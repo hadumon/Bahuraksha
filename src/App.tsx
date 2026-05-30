@@ -8,6 +8,7 @@ import { ThemeProvider } from "@/components/theme/ThemeProvider";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
 import PageErrorBoundary from "@/components/PageErrorBoundary";
 import PageSkeleton from "@/components/PageSkeleton";
+import DemoBanner from "@/components/DemoBanner";
 import { AnimatePresence, motion } from "framer-motion";
 import NotFound from "./pages/NotFound";
 import { Suspense, lazy } from "react";
@@ -296,6 +297,7 @@ const App = () => (
                 className: "bg-card border-border",
               }}
             />
+            <DemoBanner />
             <BrowserRouter>
               <AnimatedRoutes />
             </BrowserRouter>

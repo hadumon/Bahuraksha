@@ -1,7 +1,7 @@
 import { motion } from 'framer-motion';
 import AppLayout from '@/components/layout/AppLayout';
 import RiskLevelBadge from '@/components/dashboard/RiskLevelBadge';
-import { glacialLakes, glofAlerts } from '@/data/mockData';
+import { glacialLakes, glofAlerts, isMockData } from '@/data/mockData';
 import { Snowflake, Thermometer, ArrowUp, ArrowDown, Minus, AlertTriangle, MapPin, TrendingUp } from 'lucide-react';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Area, AreaChart } from 'recharts';
 
@@ -40,6 +40,11 @@ export default function GlofPage() {
             <AlertTriangle className="w-4 h-4 text-risk-warning" />
             <span>{glofAlerts.filter(a => a.isActive).length} active GLOF alerts</span>
           </div>
+          {isMockData && (
+            <span className="inline-flex items-center gap-1 rounded-full bg-risk-warning/10 px-2.5 py-0.5 text-xs font-medium text-risk-warning">
+              Demo Data
+            </span>
+          )}
         </div>
 
         {/* Lake cards */}

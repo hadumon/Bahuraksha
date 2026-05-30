@@ -48,8 +48,8 @@ export interface CitizenReport {
 
 export interface RiverLevelDataPoint {
   time: string;
-  actual: number;
-  predicted: number;
+  actual: number | null;
+  predicted: number | null;
   dangerLevel: number;
   warningLevel: number;
 }
@@ -88,17 +88,19 @@ export const citizenReports: CitizenReport[] = [
 ];
 
 export const riverLevelHistory: RiverLevelDataPoint[] = Array.from({ length: 48 }, (_, i) => {
-  const hour = i;
-  const isPredicted = i > 24;
-  const baseLevel = 3.5 + Math.sin(i / 6) * 0.8 + (i > 12 ? (i - 12) * 0.08 : 0);
+  const isPredicted = i >= 24;
+  const t = (i / 48) * Math.PI * 2;
+  const level = 2.8 + 3 * (1 - Math.cos(t)) / 2 + Math.sin(t * 3) * 0.1;
   return {
-    time: `${Math.floor(hour % 24).toString().padStart(2, '0')}:00`,
-    actual: isPredicted ? baseLevel : baseLevel + (Math.random() - 0.5) * 0.3,
-    predicted: baseLevel + (Math.random() - 0.5) * 0.2,
+    time: `${Math.floor(i % 24).toString().padStart(2, '0')}:00`,
+    actual: !isPredicted ? Number((level + (Math.random() - 0.5) * 0.2).toFixed(2)) : null,
+    predicted: isPredicted ? Number((level + (Math.random() - 0.5) * 0.12).toFixed(2)) : null,
     dangerLevel: 5.5,
     warningLevel: 4.8,
   };
 });
+
+export const isMockData = true;
 
 export const rainfallForecast = Array.from({ length: 7 }, (_, i) => ({
   day: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'][i],

@@ -55,3 +55,17 @@ test.describe("Basic App Functionality", () => {
     await expect(page.getByText("404")).toBeVisible({ timeout: 10000 });
   });
 });
+
+test.describe("Demo Mode", () => {
+  test("shows demo banner when API is unreachable", async ({ page }) => {
+    await page.goto("http://localhost:8080/dashboard", { waitUntil: "commit" });
+    await expect(page.getByText("Demo Mode")).toBeVisible({ timeout: 15000 });
+  });
+
+  test("demo banner can be dismissed", async ({ page }) => {
+    await page.goto("http://localhost:8080/dashboard", { waitUntil: "commit" });
+    await expect(page.getByText("Demo Mode")).toBeVisible({ timeout: 15000 });
+    await page.getByLabel("Dismiss demo banner").click();
+    await expect(page.getByText("Demo Mode")).not.toBeVisible();
+  });
+});
