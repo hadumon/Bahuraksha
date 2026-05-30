@@ -44,7 +44,7 @@ import { cn } from "@/lib/utils";
 
 type AlertRow = {
   id: string;
-  type: "flood" | "landslide" | "glof";
+  type: "flood" | "landslide";
   severity: "safe" | "watch" | "warning" | "evacuate";
   title: string;
   message: string;

@@ -45,25 +45,13 @@ create or replace function public.check_landslide_alert()
 returns trigger as $$
 begin
   if new.risk_level in ('warning', 'evacuate') then
-    insert into public.alerts (
-      alert_type,
-      severity,
-      title,
-      description,
-      location_lat,
-      location_lng,
-      is_active,
-      created_at
-    ) values (
+    insert into public.alerts (type, severity, title, message, zone, is_active, created_at)
+    values (
       'landslide',
-      case new.risk_level
-        when 'evacuate' then 'critical'
-        else 'high'
-      end,
+      new.risk_level,
       'Landslide Risk Alert: ' || new.zone_name,
       'ML model predicts ' || new.risk_level || ' risk with ' || round(new.probability * 100, 1) || '% probability. Primary driver: ' || new.primary_driver,
-      new.latitude,
-      new.longitude,
+      new.zone_name,
       true,
       now()
     );

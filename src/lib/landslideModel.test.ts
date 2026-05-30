@@ -40,10 +40,10 @@ describe("landslideModel (API client)", () => {
       expect(result.primaryDriver).toBe("slope_vegetation_interaction");
     });
 
-    it("falls back to heuristic when API fails", async () => {
+    it("throws when API fails", async () => {
       mockFetch.mockRejectedValueOnce(new Error("Network error"));
 
-      const result = await predictLandslideRisk({
+      await expect(predictLandslideRisk({
         slopeAngleDeg: 45,
         soilMoisturePct: 80,
         rainfall7DayMm: 200,
@@ -52,11 +52,7 @@ describe("landslideModel (API client)", () => {
         vegetationCoverPct: 30,
         elevationM: 1500,
         distanceToRoadKm: 0.5,
-      });
-
-      expect(result.probability).toBeGreaterThanOrEqual(0);
-      expect(result.probability).toBeLessThanOrEqual(1);
-      expect(result.riskLevel).toBeTruthy();
+      })).rejects.toThrow("Landslide ML API unreachable");
     });
   });
 
@@ -101,18 +97,14 @@ describe("landslideModel (API client)", () => {
       expect(results[1].id).toBe("2");
     });
 
-    it("falls back to heuristic for each zone when API fails", async () => {
+    it("throws when API fails", async () => {
       mockFetch.mockRejectedValueOnce(new Error("Network error"));
 
       const zones = [
         { id: "1", name: "Zone A", district: "District 1", coordinates: [27.7, 85.3] as [number, number], slopeAngleDeg: 30, soilMoisturePct: 50, rainfall7DayMm: 100, rainfallTodayMm: 10, seismicActivityMg: 0.002, vegetationCoverPct: 60, elevationM: 1000, distanceToRoadKm: 2 },
       ];
 
-      const results = await predictBatchLandslideRisk(zones);
-
-      expect(results).toHaveLength(1);
-      expect(results[0].id).toBe("1");
-      expect(results[0].probability).toBeGreaterThanOrEqual(0);
+      await expect(predictBatchLandslideRisk(zones)).rejects.toThrow("Landslide ML API unreachable");
     });
   });
 

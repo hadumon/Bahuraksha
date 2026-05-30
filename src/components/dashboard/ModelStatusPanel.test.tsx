@@ -15,30 +15,7 @@ describe("ModelStatusPanel", () => {
     vi.clearAllMocks();
   });
 
-  it("shows Fallback badge when prediction data is mocked", () => {
-    mockUseQuery
-      .mockReturnValueOnce({
-        data: null,
-        isLoading: false,
-        error: null,
-      })
-      .mockReturnValueOnce({
-        data: {
-          status: "ok",
-          isMock: true,
-          request: { date: "2026-05-30", bbox: [86.0, 27.7, 86.6, 28.1] },
-          prediction: { class: 1, label: "flood_water", color: "#1a6faf", confidence: 0.89, risk_score: 82.5 },
-        },
-        isLoading: false,
-        error: null,
-      });
-
-    render(<ModelStatusPanel />);
-
-    expect(screen.getByText("Fallback")).toBeInTheDocument();
-  });
-
-  it("shows Online badge when real prediction data exists", () => {
+  it("shows Online badge when prediction data exists", () => {
     mockUseQuery
       .mockReturnValueOnce({
         data: { status: "healthy", model_loaded: true, model_type: "xgboost" },

@@ -10,7 +10,6 @@ import {
   Info,
   Shield,
   X,
-  Snowflake,
   Mountain,
   UserCog,
 } from "lucide-react";
@@ -29,7 +28,7 @@ const ALL_NAV_ITEMS: NavItemDef[] = [
   { path: "/dashboard", icon: LayoutDashboard, label: "Dashboard", permission: "view:dashboard" },
   { path: "/risk-map", icon: Map, label: "Risk Map", permission: "view:risk-map" },
   { path: "/monitoring", icon: Activity, label: "River Monitoring", permission: "view:monitoring" },
-  { path: "/glof", icon: Snowflake, label: "GLOF Monitoring", permission: "view:glof" },
+
   { path: "/landslides", icon: Mountain, label: "Landslide Prediction", permission: "view:landslides" },
   { path: "/alerts", icon: AlertTriangle, label: "Alerts", permission: "view:alerts" },
   { path: "/citizen-reports", icon: Users, label: "Citizen Reports", permission: "view:citizen-reports" },

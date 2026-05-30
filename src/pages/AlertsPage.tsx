@@ -6,14 +6,14 @@ import RiskLevelBadge from "@/components/dashboard/RiskLevelBadge";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { sendWhatsAppAlert } from "@/lib/bahuraksha-api";
-import { Droplets, Mountain, AlertTriangle, Bell, BellOff, Inbox } from "lucide-react";
+import { Droplets, Mountain, Bell, BellOff, Inbox } from "lucide-react";
 
-const typeIcons = { flood: Droplets, landslide: Mountain, glof: AlertTriangle };
-const typeLabels = { flood: "Flood", landslide: "Landslide", glof: "GLOF" };
+const typeIcons = { flood: Droplets, landslide: Mountain };
+const typeLabels = { flood: "Flood", landslide: "Landslide" };
 
 type AlertRow = {
   id: string;
-  type: "flood" | "landslide" | "glof";
+  type: "flood" | "landslide";
   severity: "safe" | "watch" | "warning" | "evacuate";
   title: string;
   message: string;
@@ -181,14 +181,13 @@ export default function AlertsPage() {
                     onChange={(e) =>
                       setFormState((prev) => ({
                         ...prev,
-                        type: e.target.value as "flood" | "landslide" | "glof",
+                        type:                     e.target.value as "flood" | "landslide",
                       }))
                     }
                     className="w-full bg-background border border-border rounded-md px-3 py-2 text-sm"
                   >
                     <option value="flood">Flood</option>
                     <option value="landslide">Landslide</option>
-                    <option value="glof">GLOF</option>
                   </select>
                   <select
                     value={formState.severity}

@@ -9,16 +9,7 @@ describe("getHistory", () => {
     vi.clearAllMocks();
   });
 
-  it("returns isMock true when API call fails", async () => {
-    mockFetch.mockRejectedValueOnce(new Error("Network error"));
-
-    const result = await getHistory(3);
-
-    expect(result.isMock).toBe(true);
-    expect(result.history.length).toBe(3);
-  });
-
-  it("returns real data without isMock when API succeeds", async () => {
+  it("returns history data when API succeeds", async () => {
     mockFetch.mockResolvedValueOnce({
       ok: true,
       json: () => Promise.resolve({
@@ -30,7 +21,12 @@ describe("getHistory", () => {
 
     const result = await getHistory(3);
 
-    expect(result.isMock).toBeUndefined();
     expect(result.history[0].label).toBe("dry_land");
+  });
+
+  it("throws when API call fails", async () => {
+    mockFetch.mockRejectedValueOnce(new Error("Network error"));
+
+    await expect(getHistory(3)).rejects.toThrow();
   });
 });

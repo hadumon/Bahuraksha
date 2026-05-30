@@ -16,7 +16,6 @@ const testZone: LiveRiskZone = {
 
 const mockPrediction: PredictionResponse = {
   status: "ok",
-  isMock: true,
   request: { date: "2026-05-30", bbox: [86.0, 27.7, 86.6, 28.1] },
   prediction: { class: 1, label: "flood_water", color: "#1a6faf", confidence: 0.89, risk_score: 82.5 },
 };
@@ -28,18 +27,7 @@ const realPrediction: PredictionResponse = {
 };
 
 describe("computeCompositeRiskZones", () => {
-  it("excludes mocked XGBoost prediction from composite score", () => {
-    const result = computeCompositeRiskZones({
-      zones: [testZone],
-      stations: [],
-      rainfall: [],
-      xgboostPrediction: mockPrediction,
-    });
-
-    expect(result[0].drivers.xgboost).toBe(0);
-  });
-
-  it("includes real XGBoost prediction in composite score", () => {
+  it("includes XGBoost prediction in composite score", () => {
     const result = computeCompositeRiskZones({
       zones: [testZone],
       stations: [],
@@ -50,12 +38,11 @@ describe("computeCompositeRiskZones", () => {
     expect(result[0].drivers.xgboost).toBeGreaterThan(0);
   });
 
-  it("sets data quality to low when only mocked XGBoost available", () => {
+  it("sets data quality to low when no live data sources available", () => {
     const result = computeCompositeRiskZones({
       zones: [testZone],
       stations: [],
       rainfall: [],
-      xgboostPrediction: mockPrediction,
     });
 
     expect(result[0].dataQuality).toBe("low");

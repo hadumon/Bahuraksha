@@ -22,7 +22,7 @@ export type Database = {
           message: string
           severity: "safe" | "watch" | "warning" | "evacuate"
           title: string
-          type: "flood" | "landslide" | "glof"
+          type: "flood" | "landslide"
           zone: string
         }
         Insert: {
@@ -32,7 +32,7 @@ export type Database = {
           message: string
           severity: "safe" | "watch" | "warning" | "evacuate"
           title: string
-          type: "flood" | "landslide" | "glof"
+          type: "flood" | "landslide"
           zone: string
         }
         Update: {
@@ -42,7 +42,7 @@ export type Database = {
           message?: string
           severity?: "safe" | "watch" | "warning" | "evacuate"
           title?: string
-          type?: "flood" | "landslide" | "glof"
+          type?: "flood" | "landslide"
           zone?: string
         }
         Relationships: []

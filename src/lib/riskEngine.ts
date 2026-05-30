@@ -130,8 +130,7 @@ export function computeCompositeRiskZones(params: {
   hecRasResults?: HecRasStationResult[];
 }): CompositeRiskZone[] {
   const rainfallSummary = summarizeRainfall(params.rainfall);
-  const xgboostIsMock = params.xgboostPrediction?.isMock === true;
-  const hasXgboost = Boolean(params.xgboostPrediction?.prediction) && !xgboostIsMock;
+  const hasXgboost = Boolean(params.xgboostPrediction?.prediction);
   const xgboostRisk = hasXgboost
     ? clamp01((params.xgboostPrediction!.prediction.risk_score ?? 0) / 100)
     : 0;

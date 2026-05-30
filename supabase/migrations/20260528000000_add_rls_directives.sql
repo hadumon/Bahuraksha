@@ -68,6 +68,7 @@ CREATE POLICY "profiles_delete_policy" ON public.profiles
 
 -- ─── Alerts RLS ──────────────────────────────────────────────────────────────
 -- Everyone authenticated can read alerts
+DROP POLICY IF EXISTS "Alerts are publicly readable" ON public.alerts;
 DROP POLICY IF EXISTS "alerts_select_policy" ON public.alerts;
 CREATE POLICY "alerts_select_policy" ON public.alerts
   FOR SELECT
@@ -91,6 +92,7 @@ CREATE POLICY "alerts_delete_policy" ON public.alerts
 
 -- ─── Citizen Reports RLS ─────────────────────────────────────────────────────
 -- Only roles with view:citizen-reports permission can read all reports
+DROP POLICY IF EXISTS "Reports are publicly readable" ON public.citizen_reports;
 DROP POLICY IF EXISTS "citizen_reports_select_policy" ON public.citizen_reports;
 CREATE POLICY "citizen_reports_select_policy" ON public.citizen_reports
   FOR SELECT
@@ -100,6 +102,7 @@ CREATE POLICY "citizen_reports_select_policy" ON public.citizen_reports
   );
 
 -- Anyone authenticated can insert (field officers + general users)
+DROP POLICY IF EXISTS "Anyone can submit reports" ON public.citizen_reports;
 DROP POLICY IF EXISTS "citizen_reports_insert_policy" ON public.citizen_reports;
 CREATE POLICY "citizen_reports_insert_policy" ON public.citizen_reports
   FOR INSERT

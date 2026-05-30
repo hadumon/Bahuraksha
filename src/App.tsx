@@ -8,7 +8,7 @@ import { ThemeProvider } from "@/components/theme/ThemeProvider";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
 import PageErrorBoundary from "@/components/PageErrorBoundary";
 import PageSkeleton from "@/components/PageSkeleton";
-import DemoBanner from "@/components/DemoBanner";
+
 import { AnimatePresence, motion } from "framer-motion";
 import NotFound from "./pages/NotFound";
 import { Suspense, lazy } from "react";
@@ -23,7 +23,6 @@ const AlertsPage = lazy(() => import("./pages/AlertsPage"));
 const CitizenReportsPage = lazy(() => import("./pages/CitizenReportsPage"));
 const DataSourcesPage = lazy(() => import("./pages/DataSourcesPage"));
 const AboutPage = lazy(() => import("./pages/AboutPage"));
-const GlofPage = lazy(() => import("./pages/GlofPage"));
 const BlogPage = lazy(() => import("./pages/BlogPage"));
 const DisastersPage = lazy(() => import("./pages/DisastersPage"));
 const LandslidesPage = lazy(() => import("./pages/LandslidesPage"));
@@ -84,7 +83,7 @@ function AnimatedRoutes() {
       case "/citizen-reports": return <CitizenReportsPage />;
       case "/data-sources": return <DataSourcesPage />;
       case "/about": return <AboutPage />;
-      case "/glof": return <GlofPage />;
+
       case "/landslides": return <LandslidesPage />;
       case "/blog": return <BlogPage />;
       case "/disasters": return <DisastersPage />;
@@ -232,18 +231,6 @@ function AnimatedRoutes() {
             }
           />
           <Route
-            path="/glof"
-            element={
-              <PageErrorBoundary pageName="GLOF Monitoring">
-                <Suspense fallback={<PageSkeleton variant="detail" />}>
-                  <PageTransition>
-                    <GlofPage />
-                  </PageTransition>
-                </Suspense>
-              </PageErrorBoundary>
-            }
-          />
-          <Route
             path="/landslides"
             element={
               <PageErrorBoundary pageName="Landslide Prediction">
@@ -297,7 +284,6 @@ const App = () => (
                 className: "bg-card border-border",
               }}
             />
-            <DemoBanner />
             <BrowserRouter>
               <AnimatedRoutes />
             </BrowserRouter>

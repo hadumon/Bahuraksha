@@ -5,7 +5,7 @@ import { cn } from "@/lib/utils";
 
 type AlertFeedItem = {
   id: string;
-  type: "flood" | "landslide" | "glof";
+  type: "flood" | "landslide";
   severity: "safe" | "watch" | "warning" | "evacuate";
   title: string;
   message: string;
@@ -17,7 +17,6 @@ type AlertFeedItem = {
 const typeIcons = {
   flood: { icon: Droplets, color: "text-ocean-400", bg: "bg-ocean-400/15" },
   landslide: { icon: Mountain, color: "text-risk-watch", bg: "bg-risk-watch/15" },
-  glof: { icon: AlertTriangle, color: "text-risk-evacuate", bg: "bg-risk-evacuate/15" },
 };
 
 interface AlertFeedProps {

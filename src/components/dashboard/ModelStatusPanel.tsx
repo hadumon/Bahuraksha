@@ -18,9 +18,8 @@ export default function ModelStatusPanel() {
     staleTime: 1000 * 60 * 10,
   });
 
-  const hasRealData = latest.data && !(latest.data as any).isMock;
-  const isMock = !hasRealData && latest.data?.isMock === true;
-  const isHealthy = hasRealData || (health.data?.model_loaded === true && !health.error);
+  const hasLatestData = !!latest.data;
+  const isHealthy = hasLatestData || (health.data?.model_loaded === true && !health.error);
   const riskScore = latest.data?.prediction.risk_score;
 
   return (
@@ -44,7 +43,7 @@ export default function ModelStatusPanel() {
           )}
         >
           {isHealthy ? <CheckCircle2 className="h-3 w-3" /> : <AlertCircle className="h-3 w-3" />}
-          {health.isLoading ? "Checking" : isHealthy ? "Online" : isMock ? "Fallback" : "Unavailable"}
+          {health.isLoading ? "Checking" : isHealthy ? "Online" : "Unavailable"}
         </span>
       </div>
 
@@ -70,7 +69,7 @@ export default function ModelStatusPanel() {
         </div>
       )}
 
-      {(health.error || latest.error) && !hasRealData && (
+      {(health.error || latest.error) && !hasLatestData && (
         <p className="mt-3 text-[11px] text-risk-warning">
           API note: the deployed model endpoint did not respond successfully. Check Render health,
           cold-start time, and installed Python dependencies.
