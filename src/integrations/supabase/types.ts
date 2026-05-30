@@ -457,6 +457,119 @@ export type Database = {
         }
         Relationships: []
       }
+      landslide_predictions: {
+        Row: {
+          id: string
+          zone_id: string
+          zone_name: string
+          district: string
+          latitude: number
+          longitude: number
+          probability: number
+          risk_level: "safe" | "watch" | "warning" | "evacuate"
+          susceptibility_score: number
+          primary_driver: string
+          secondary_drivers: Json
+          confidence: number
+          time_horizon_hours: number
+          model_source: "ml-api" | "heuristic"
+          feature_contributions: Json | null
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          zone_id: string
+          zone_name: string
+          district: string
+          latitude: number
+          longitude: number
+          probability: number
+          risk_level: "safe" | "watch" | "warning" | "evacuate"
+          susceptibility_score: number
+          primary_driver: string
+          secondary_drivers?: Json
+          confidence: number
+          time_horizon_hours?: number
+          model_source: "ml-api" | "heuristic"
+          feature_contributions?: Json | null
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          zone_id?: string
+          zone_name?: string
+          district?: string
+          latitude?: number
+          longitude?: number
+          probability?: number
+          risk_level?: "safe" | "watch" | "warning" | "evacuate"
+          susceptibility_score?: number
+          primary_driver?: string
+          secondary_drivers?: Json
+          confidence?: number
+          time_horizon_hours?: number
+          model_source?: "ml-api" | "heuristic"
+          feature_contributions?: Json | null
+          created_at?: string
+        }
+        Relationships: []
+      }
+      risk_zone_assessments: {
+        Row: {
+          id: string
+          zone_id: string | null
+          zone_name: string
+          assessed_at: string
+          computed_risk_level: "safe" | "watch" | "warning" | "evacuate"
+          composite_score: number
+          computed_flood_probability: number
+          data_quality: "low" | "medium" | "high"
+          nearest_station_name: string | null
+          drivers: Json
+          explanation: Json
+          model_versions: Json
+          source: string
+        }
+        Insert: {
+          id?: string
+          zone_id?: string | null
+          zone_name: string
+          assessed_at?: string
+          computed_risk_level: "safe" | "watch" | "warning" | "evacuate"
+          composite_score: number
+          computed_flood_probability: number
+          data_quality: "low" | "medium" | "high"
+          nearest_station_name?: string | null
+          drivers?: Json
+          explanation?: Json
+          model_versions?: Json
+          source?: string
+        }
+        Update: {
+          id?: string
+          zone_id?: string | null
+          zone_name?: string
+          assessed_at?: string
+          computed_risk_level?: "safe" | "watch" | "warning" | "evacuate"
+          composite_score?: number
+          computed_flood_probability?: number
+          data_quality?: "low" | "medium" | "high"
+          nearest_station_name?: string | null
+          drivers?: Json
+          explanation?: Json
+          model_versions?: Json
+          source?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "risk_zone_assessments_zone_id_fkey"
+            columns: ["zone_id"]
+            isOneToOne: false
+            referencedRelation: "risk_zones"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       profiles: {
         Row: {
           avatar_url: string | null

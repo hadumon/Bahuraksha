@@ -31,7 +31,7 @@ export async function persistRiskAssessments(
     source: "frontend-risk-engine",
   }));
 
-  const { error } = await supabase.from("risk_zone_assessments" as never).insert(rows as never);
+  const { error } = await supabase.from("risk_zone_assessments").insert(rows);
 
   if (error) {
     return { attempted: rows.length, inserted: 0, error: error.message };

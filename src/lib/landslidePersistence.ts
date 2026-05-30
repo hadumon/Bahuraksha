@@ -47,7 +47,7 @@ export async function persistLandslidePredictions(
     feature_contributions: pred.feature_contributions ?? null,
   }));
 
-  const { error } = await supabase.from("landslide_predictions" as never).insert(rows as never);
+  const { error } = await supabase.from("landslide_predictions").insert(rows);
 
   if (error) {
     return { attempted: rows.length, inserted: 0, error: error.message };
@@ -58,11 +58,10 @@ export async function persistLandslidePredictions(
 
 export async function fetchLatestLandslidePredictions(limit = 50) {
   const { data, error } = await supabase
-    .from("landslide_predictions" as never)
+    .from("landslide_predictions")
     .select("*")
     .order("created_at", { ascending: false })
     .limit(limit);
-
   if (error || !data?.length) {
     return [] as LandslidePredictionRecord[];
   }
@@ -91,7 +90,7 @@ export async function fetchLandslidePredictionHistory(
   limit = 100,
 ) {
   const { data, error } = await supabase
-    .from("landslide_predictions" as never)
+    .from("landslide_predictions")
     .select("*")
     .eq("zone_id", zoneId)
     .order("created_at", { ascending: false })
