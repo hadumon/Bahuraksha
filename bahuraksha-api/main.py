@@ -152,6 +152,124 @@ def version(request: Request) -> dict[str, Any]:
     }
 
 
+# ─── Latest/history endpoints for frontend ─────────────────────────────────────
+
+class LatestPrediction(BaseModel):
+    class_field: int = Field(..., alias="class")
+    label: str
+    color: str
+    confidence: float
+    risk_score: float
+
+class LatestRequest(BaseModel):
+    date: str
+    bbox: list[float]
+
+class LatestResponse(BaseModel):
+    status: str = "ok"
+    request: LatestRequest
+    prediction: LatestPrediction
+
+class HistoryEntry(BaseModel):
+    date: str
+    label: str
+    risk_score: float
+    confidence: float
+
+class HistoryResponse(BaseModel):
+    history: list[HistoryEntry]
+
+
+@app.get("/latest")
+@limiter.limit("20/minute")
+def latest(request: Request) -> LatestResponse:
+    if not flood_bundle:
+        raise HTTPException(status_code=503, detail="Flood model not loaded")
+    rainfall = load_daily_rainfall()
+    discharge = load_daily_discharge()
+    sar = load_daily_sar()
+    merged = (
+        rainfall.merge(discharge, on="date", how="inner")
+        .merge(sar, on="date", how="inner")
+        .dropna(subset=["rf_1day", "rf_3day", "rf_7day", "rf_30day", "discharge_proxy", "soil_moisture_index", "sar_vv_db", "sar_vh_db", "sar_vv_vh_ratio_db"])
+        .sort_values("date")
+    )
+    if merged.empty:
+        raise HTTPException(status_code=503, detail="No overlapping CSV data available")
+    row = merged.iloc[-1]
+    data_date = str(pd.Timestamp(row["date"]).date())
+    payload = {
+        "date": data_date, "lat": 27.7172, "lon": 85.3240,
+        "rf_1day": float(row["rf_1day"]), "rf_3day": float(row["rf_3day"]),
+        "rf_7day": float(row["rf_7day"]), "rf_30day": float(row["rf_30day"]),
+        "discharge_proxy": float(row["discharge_proxy"]),
+        "soil_moisture_index": float(row["soil_moisture_index"]),
+        "elevation_m": 1200.0, "slope_deg": 8.0, "aspect_deg": 120.0, "curvature": 0.0,
+        "sar_vv_db": float(row["sar_vv_db"]), "sar_vh_db": float(row["sar_vh_db"]),
+        "sar_vv_vh_ratio_db": float(row["sar_vv_vh_ratio_db"]),
+    }
+    features = _build_feature_row(payload, flood_bundle["feature_columns"])
+    prob = float(flood_bundle["model"].predict_proba(features)[0, 1])
+    thr = float(flood_bundle["threshold"])
+    pred_class = int(prob >= thr)
+    return LatestResponse(
+        request=LatestRequest(date=data_date, bbox=[86.0, 27.7, 86.6, 28.1]),
+        prediction=LatestPrediction(**{
+            "class": pred_class,
+            "label": "flood_water" if pred_class == 1 else "dry_land",
+            "color": "#1a6faf" if pred_class == 1 else "#22c55e",
+            "confidence": round(max(prob, 1 - prob), 4),
+            "risk_score": round(prob * 100, 1),
+        }),
+    )
+
+
+@app.get("/history")
+@limiter.limit("20/minute")
+def history(request: Request, days: int = Query(default=7, ge=1, le=90)) -> HistoryResponse:
+    if not flood_bundle:
+        raise HTTPException(status_code=503, detail="Flood model not loaded")
+    rainfall = load_daily_rainfall()
+    discharge = load_daily_discharge()
+    sar = load_daily_sar()
+    merged = (
+        rainfall.merge(discharge, on="date", how="inner")
+        .merge(sar, on="date", how="inner")
+        .dropna(subset=["rf_1day", "rf_3day", "rf_7day", "rf_30day", "discharge_proxy", "soil_moisture_index", "sar_vv_db", "sar_vh_db", "sar_vv_vh_ratio_db"])
+        .sort_values("date")
+    )
+    if merged.empty:
+        raise HTTPException(status_code=503, detail="No overlapping CSV data available")
+    recent = merged.tail(days)
+    entries: list[HistoryEntry] = []
+    for _, row in recent.iterrows():
+        data_date = str(pd.Timestamp(row["date"]).date())
+        payload = {
+            "date": data_date, "lat": 27.7172, "lon": 85.3240,
+            "rf_1day": float(row["rf_1day"]), "rf_3day": float(row["rf_3day"]),
+            "rf_7day": float(row["rf_7day"]), "rf_30day": float(row["rf_30day"]),
+            "discharge_proxy": float(row["discharge_proxy"]),
+            "soil_moisture_index": float(row["soil_moisture_index"]),
+            "elevation_m": 1200.0, "slope_deg": 8.0, "aspect_deg": 120.0, "curvature": 0.0,
+            "sar_vv_db": float(row["sar_vv_db"]), "sar_vh_db": float(row["sar_vh_db"]),
+            "sar_vv_vh_ratio_db": float(row["sar_vv_vh_ratio_db"]),
+        }
+        try:
+            features = _build_feature_row(payload, flood_bundle["feature_columns"])
+            prob = float(flood_bundle["model"].predict_proba(features)[0, 1])
+            thr = float(flood_bundle["threshold"])
+            pred_class = int(prob >= thr)
+            entries.append(HistoryEntry(
+                date=data_date,
+                label="flood_water" if pred_class == 1 else "dry_land",
+                risk_score=round(prob * 100, 1),
+                confidence=round(max(prob, 1 - prob), 4),
+            ))
+        except Exception:
+            entries.append(HistoryEntry(date=data_date, label="dry_land", risk_score=0.0, confidence=0.0))
+    return HistoryResponse(history=entries)
+
+
 @app.post("/predict/flood", response_model=PredictResponse)
 @limiter.limit("20/minute")
 def predict_flood(request: Request, payload: FloodPredictRequest) -> PredictResponse:
