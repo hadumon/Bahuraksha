@@ -18,9 +18,9 @@ export default defineConfig({
     },
   ],
   webServer: {
-    command: "npx vite dev --mode test",
+    command: "npx vite build --mode test && npx vite preview --port 8080",
     url: "http://localhost:8080",
     reuseExistingServer: !process.env.CI,
-    timeout: 120000,
+    timeout: 180000,
   },
 });

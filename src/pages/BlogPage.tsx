@@ -1,6 +1,7 @@
 import { motion } from "framer-motion";
 import { ArrowRight, Calendar, User } from "lucide-react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
+import { toast } from "sonner";
 import { PublicNavbar } from "@/components/layout/PublicNavbar";
 import { cn } from "@/lib/utils";
 
@@ -102,6 +103,13 @@ const blogPosts = [
 ];
 
 export default function BlogPage() {
+  const navigate = useNavigate();
+
+  const handleReadArticle = (post: (typeof blogPosts)[number]) => {
+    toast.info(`"${post.title}" — Full article coming soon`);
+    navigate(`/blog/${post.id}`, { state: { post } });
+  };
+
   return (
     <div className="min-h-screen bg-background overflow-x-hidden">
       <PublicNavbar />
@@ -180,7 +188,10 @@ export default function BlogPage() {
                     <span className="text-xs font-medium bg-secondary/50 px-2 py-1 rounded-md text-foreground">
                       {post.stats}
                     </span>
-                    <button className="text-sm font-semibold text-ocean-400 flex items-center gap-1 group/btn hover:text-ocean-300 transition-colors">
+                    <button
+                      onClick={() => handleReadArticle(post)}
+                      className="text-sm font-semibold text-ocean-400 flex items-center gap-1 group/btn hover:text-ocean-300 transition-colors"
+                    >
                       Read Article
                       <ArrowRight className="w-4 h-4 group-hover/btn:translate-x-1 transition-transform" />
                     </button>

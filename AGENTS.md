@@ -23,6 +23,11 @@ npm run test:all         # Unit + E2E
 npm run playwright:install  # Install Playwright browsers
 npm run ingest:satellite # Satellite STAC ingestion (needs SUPABASE_URL + SUPABASE_SERVICE_KEY, uses Microsoft Planetary Computer STAC)
 npm run ingest:rainfall  # Rainfall data ingestion
+start-demo.bat           # One-command start: API (8000) + frontend (8080)
+demo-check.bat           # Health check: API, frontend, models, CSVs, predictions
+cd bahuraksha-api && python train_flood_model.py      # Train flood model
+cd bahuraksha-api && python train_landslide_model.py   # Train landslide model
+cd bahuraksha-api && python precompute_snapshots.py     # Generate offline fallback predictions
 ```
 
 ## Architecture
@@ -113,10 +118,10 @@ uvicorn main:app --reload --port 8000
 
 ## Testing
 
-- **E2E**: Playwright uses `npx vite dev --mode test` (not `npm run dev`) because npm 11 mishandles `--mode` flag. Loads `.env.test` (`VITE_DISABLE_AUTH=true`).
+- **E2E**: Playwright uses `npx vite build --mode test && npx vite preview --port 8080` (production build + preview, not dev server). Vite dev mode's ESM module loading is too slow for E2E (3555 modules in dependency graph). Builds with `--mode test` to bake in `.env.test` (`VITE_DISABLE_AUTH=true`).
 - **E2E auth**: Tests also check `PLAYWRIGHT_DISABLE_AUTH` env var. Set `PLAYWRIGHT_AUTH_EMAIL` + `PLAYWRIGHT_AUTH_PASSWORD` for auth-required E2E runs.
-- **E2E webServer**: `reuseExistingServer: !process.env.CI`.
-- **E2E navigation**: Use `waitUntil: "commit"` in `page.goto()` — `load` / `domcontentloaded` time out due to Supabase requests.
+- **E2E webServer**: `reuseExistingServer: !process.env.CI`. First run builds the app (~24s), subsequent runs reuse the build if unchanged.
+- **E2E navigation**: Use `waitUntil: "commit"` in `page.goto()` works fine with production build (preferred for speed). `waitUntil: "load"` also works with production build.
 - **E2E fixture**: `playwright-fixture.ts` exists at root but is a passthrough re-export. Tests import directly from `@playwright/test`.
 - **Vitest**: `@vitejs/plugin-react` (not react-swc). Setup: `src/test/setup.ts` (matchMedia polyfill).
 - **Backend tests (`bahuraksha-api/`)**: `python -m pytest test_main.py test_integration.py -v` — runs 9 tests (2 unit, 7 integration).

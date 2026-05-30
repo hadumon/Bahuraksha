@@ -85,10 +85,14 @@ export const RISK_COLOR: Record<ReturnType<typeof RISK_LEVEL>, string> = {
 // ── API Client ────────────────────────────────────────────────────────────────
 
 async function apiFetch<T>(path: string, options?: RequestInit): Promise<T> {
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), 10000);
   const res = await fetch(`${API_BASE}${path}`, {
     headers: { "Content-Type": "application/json" },
+    signal: controller.signal,
     ...options,
   });
+  clearTimeout(timeout);
 
   if (!res.ok) {
     const err = await res.json().catch(() => ({ detail: res.statusText }));

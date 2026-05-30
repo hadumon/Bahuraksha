@@ -20,7 +20,11 @@ const glowDotClass = {
 };
 
 export default function MonitoringPage() {
-  const { data: riverStations = [] } = useQuery({
+  const {
+    data: riverStations = [],
+    isLoading,
+    error,
+  } = useQuery({
     queryKey: ["river-stations"],
     queryFn: fetchRiverStations,
   });
@@ -70,6 +74,43 @@ export default function MonitoringPage() {
             <h2 className="text-sm font-semibold text-foreground uppercase tracking-wider section-header mb-4">
               Gauge Stations
             </h2>
+
+            {isLoading ? (
+              <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-5 gap-4">
+                {Array.from({ length: 5 }).map((_, i) => (
+                  <div
+                    key={i}
+                    className="station-card p-4 animate-pulse"
+                    style={{ animationDelay: `${i * 80}ms` }}
+                  >
+                    <div className="h-4 w-24 bg-secondary/60 rounded mb-3" />
+                    <div className="h-8 w-20 bg-secondary/60 rounded mb-3" />
+                    <div className="h-2 bg-secondary/60 rounded mb-2" />
+                    <div className="flex gap-2 mt-2">
+                      <div className="h-3 w-10 bg-secondary/60 rounded" />
+                      <div className="h-3 w-14 bg-secondary/60 rounded" />
+                      <div className="h-3 w-14 bg-secondary/60 rounded" />
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : error ? (
+              <div className="rounded-xl border border-risk-evacuate/30 bg-risk-evacuate/5 p-8 text-center space-y-2">
+                <div className="w-12 h-12 mx-auto rounded-full bg-risk-evacuate/10 flex items-center justify-center">
+                  <Waves className="w-6 h-6 text-risk-evacuate" />
+                </div>
+                <p className="text-risk-evacuate font-semibold">Failed to load river stations</p>
+                <p className="text-sm text-muted-foreground max-w-md mx-auto">The data source may be unavailable. Please try again later.</p>
+              </div>
+            ) : riverStations.length === 0 ? (
+              <div className="rounded-xl border border-border/50 bg-secondary/20 p-8 text-center space-y-2">
+                <div className="w-12 h-12 mx-auto rounded-full bg-secondary/40 flex items-center justify-center">
+                  <Waves className="w-6 h-6 text-muted-foreground" />
+                </div>
+                <p className="text-muted-foreground font-semibold">No river stations found</p>
+                <p className="text-sm text-muted-foreground">Station data will appear here once ingested.</p>
+              </div>
+            ) : (
             <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-5 gap-4">
               {riverStations.map((station) => {
                 const TrendIcon = trendIcons[station.trend];
@@ -122,6 +163,7 @@ export default function MonitoringPage() {
                 );
               })}
             </div>
+            )}
           </div>
 
           <DigitalTwinPanel stations={riverStations} />

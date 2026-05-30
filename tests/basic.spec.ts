@@ -15,8 +15,8 @@ async function signIn(page: Page) {
   }
 
   await page.goto("http://localhost:8080/login", { waitUntil: "commit" });
-  await page.getByRole("textbox", { name: /email/i }).fill(E2E_EMAIL);
-  await page.getByRole("textbox", { name: /password/i }).fill(E2E_PASSWORD);
+  await page.locator("#email").fill(E2E_EMAIL);
+  await page.locator("#password").fill(E2E_PASSWORD);
   await page.locator("form").getByRole("button", { name: "Sign In" }).click();
   await expect(page).toHaveURL("/");
 }
@@ -26,7 +26,7 @@ test.describe("Basic App Functionality", () => {
     if (AUTH_ENABLED) {
       await signIn(page);
     } else {
-      await page.goto("http://localhost:8080/dashboard", { waitUntil: "commit" });
+      await page.goto("http://localhost:8080/dashboard", { waitUntil: "load" });
     }
   });
 
@@ -35,7 +35,7 @@ test.describe("Basic App Functionality", () => {
   });
 
   test("should navigate to risk map page", async ({ page }) => {
-    await page.locator("nav").first().waitFor({ state: "visible", timeout: 10000 });
+    await page.locator("nav").first().waitFor({ state: "attached", timeout: 15000 });
     const riskMapLink = page.locator("a[href*='risk-map']").first();
     await expect(riskMapLink).toBeVisible({ timeout: 10000 });
     await riskMapLink.click();
@@ -43,7 +43,7 @@ test.describe("Basic App Functionality", () => {
   });
 
   test("should navigate to monitoring page", async ({ page }) => {
-    await page.locator("nav").first().waitFor({ state: "visible", timeout: 10000 });
+    await page.locator("nav").first().waitFor({ state: "attached", timeout: 15000 });
     const monitoringLink = page.locator("a[href*='monitoring']").first();
     await expect(monitoringLink).toBeVisible({ timeout: 10000 });
     await monitoringLink.click();

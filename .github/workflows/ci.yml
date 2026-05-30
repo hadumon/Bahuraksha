@@ -52,7 +52,40 @@ jobs:
           python-version: "3.11"
           cache: pip
       - run: pip install -r requirements.txt
-      - run: python -m pytest test_main.py test_integration.py -v
+      - run: python -m pytest test_main.py test_integration.py test_training.py test_landslide_training.py -v
+
+  train-check:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: bahuraksha-api
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+      - run: pip install -r requirements.txt
+      - name: Verify flood training pipeline
+        run: python train_flood_model.py --dry-run --n-estimators 50 --max-depth 4
+      - name: Verify landslide training pipeline
+        run: python train_landslide_model.py --dry-run --n-estimators 50 --max-depth 4
+      - name: Verify models load and predict
+        run: python -c "
+import joblib, json
+from pathlib import Path
+from csv_models import _build_feature_row
+
+for name in ['flood_model.pkl', 'landslide_model.pkl']:
+    b = joblib.load(Path('models') / name)
+    assert 'model' in b
+    assert 'threshold' in b
+    assert 'feature_columns' in b
+    assert len(b['feature_columns']) > 10
+    print(f'OK: {name} - {len(b[\"feature_columns\"])} features')
+"
+      - name: Precompute fallback snapshot
+        run: python precompute_snapshots.py
 
   build:
     runs-on: ubuntu-latest

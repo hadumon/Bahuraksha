@@ -4,7 +4,8 @@ import AppLayout from "@/components/layout/AppLayout";
 import AlertFeed from "@/components/dashboard/AlertFeed";
 import RiskLevelBadge from "@/components/dashboard/RiskLevelBadge";
 import { supabase } from "@/integrations/supabase/client";
-import { Droplets, Mountain, AlertTriangle, Bell, BellOff } from "lucide-react";
+import { toast } from "sonner";
+import { Droplets, Mountain, AlertTriangle, Bell, BellOff, Inbox } from "lucide-react";
 
 const typeIcons = { flood: Droplets, landslide: Mountain, glof: AlertTriangle };
 const typeLabels = { flood: "Flood", landslide: "Landslide", glof: "GLOF" };
@@ -92,6 +93,7 @@ export default function AlertsPage() {
     const { error } = await supabase.from("alerts").insert(newAlert);
     if (error) {
       console.error("Cannot insert alert", error);
+      toast.error("Failed to create alert", { description: error.message });
     } else {
       setFormState({
         title: "",
@@ -229,7 +231,14 @@ export default function AlertsPage() {
         </div>
 
         <div className="space-y-3">
-          {alerts.map((alert) => {
+          {alerts.length === 0 ? (
+            <div className="rounded-xl border border-border/50 bg-secondary/20 p-8 text-center">
+              <Inbox className="w-8 h-8 mx-auto text-muted-foreground mb-2" />
+              <p className="text-muted-foreground font-semibold">No alerts yet</p>
+              <p className="text-sm text-muted-foreground mt-1">Alerts will appear here once created.</p>
+            </div>
+          ) : (
+          alerts.map((alert) => {
             const Icon = typeIcons[alert.type];
             return (
               <div
@@ -292,7 +301,8 @@ export default function AlertsPage() {
                 </div>
               </div>
             );
-          })}
+          })
+          )}
         </div>
       </div>
     </AppLayout>

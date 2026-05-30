@@ -27,15 +27,27 @@ const iconByCategory = {
 } as const;
 
 export default function DataSourcesPage() {
-  const { data: sources = [] } = useQuery({
+  const {
+    data: sources = [],
+    isLoading: sourcesLoading,
+    error: sourcesError,
+  } = useQuery({
     queryKey: ["data-sources"],
     queryFn: fetchDataSources,
   });
-  const { data: satelliteProducts = [] } = useQuery({
+  const {
+    data: satelliteProducts = [],
+    isLoading: productsLoading,
+    error: productsError,
+  } = useQuery({
     queryKey: ["satellite-products", "data-sources"],
     queryFn: fetchSatelliteProducts,
   });
-  const { data: sentinelScenes = [] } = useQuery({
+  const {
+    data: sentinelScenes = [],
+    isLoading: scenesLoading,
+    error: scenesError,
+  } = useQuery({
     queryKey: ["sentinel-scenes", "latest"],
     queryFn: () => fetchLatestSentinelScenes(12),
   });
@@ -92,8 +104,41 @@ export default function DataSourcesPage() {
           )}
         </div>
 
+        {sourcesLoading ? (
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {Array.from({ length: 4 }).map((_, i) => (
+              <div key={i} className="gradient-card rounded-xl border border-border p-5 animate-pulse" style={{ animationDelay: `${i * 100}ms` }}>
+                <div className="flex items-start gap-4">
+                  <div className="w-10 h-10 rounded-lg bg-secondary/50 shrink-0" />
+                  <div className="flex-1 space-y-3 py-1">
+                    <div className="h-4 w-2/3 bg-secondary/50 rounded" />
+                    <div className="h-3 w-full bg-secondary/50 rounded" />
+                    <div className="h-3 w-1/2 bg-secondary/50 rounded" />
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        ) : sourcesError ? (
+          <div className="rounded-xl border border-risk-evacuate/30 bg-risk-evacuate/5 p-8 text-center space-y-2">
+            <div className="w-12 h-12 mx-auto rounded-full bg-risk-evacuate/10 flex items-center justify-center">
+              <Satellite className="w-6 h-6 text-risk-evacuate" />
+            </div>
+            <p className="text-risk-evacuate font-semibold">Failed to load data sources</p>
+            <p className="text-sm text-muted-foreground">{sourcesError.message}</p>
+          </div>
+        ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          {sources.map((source) => {
+          {sources.length === 0 ? (
+            <div className="col-span-full rounded-xl border border-border/50 bg-secondary/20 p-8 text-center space-y-2">
+              <div className="w-12 h-12 mx-auto rounded-full bg-secondary/40 flex items-center justify-center">
+                <Satellite className="w-6 h-6 text-muted-foreground" />
+              </div>
+              <p className="text-muted-foreground font-semibold">No data sources configured</p>
+              <p className="text-sm text-muted-foreground">Sources will appear here once ingested.</p>
+            </div>
+          ) : (
+          sources.map((source) => {
             const Icon =
               iconByCategory[source.category as keyof typeof iconByCategory] ??
               Satellite;
@@ -149,8 +194,10 @@ export default function DataSourcesPage() {
                 </div>
               </div>
             );
-          })}
+          })
+          )}
         </div>
+        )}
 
         <div className="gradient-card rounded-xl border border-border p-6">
           <div className="flex items-center justify-between gap-3 mb-4">
@@ -167,11 +214,28 @@ export default function DataSourcesPage() {
             </span>
           </div>
 
+          {scenesLoading ? (
+            <div className="flex items-center justify-center py-12">
+              <div className="flex flex-col items-center gap-3 text-sm text-muted-foreground">
+                <div className="h-5 w-5 border-2 border-primary border-t-transparent rounded-full animate-spin" />
+                <span>Loading Sentinel scenes...</span>
+              </div>
+            </div>
+          ) : scenesError ? (
+            <div className="rounded-lg border border-risk-evacuate/30 bg-risk-evacuate/5 p-6 text-center space-y-2">
+              <div className="w-10 h-10 mx-auto rounded-full bg-risk-evacuate/10 flex items-center justify-center">
+                <Satellite className="w-5 h-5 text-risk-evacuate" />
+              </div>
+              <p className="text-sm text-risk-evacuate font-semibold">Failed to load Sentinel scenes</p>
+              <p className="text-xs text-muted-foreground">{scenesError.message}</p>
+            </div>
+          ) : (
           <div className="space-y-3">
             {sentinelScenes.length === 0 ? (
-              <p className="text-sm text-muted-foreground">
-                No ingested Sentinel scenes found yet.
-              </p>
+              <div className="flex flex-col items-center py-8 text-center space-y-2">
+                <Satellite className="w-8 h-8 text-muted-foreground/40" />
+                <p className="text-sm text-muted-foreground">No ingested Sentinel scenes found yet.</p>
+              </div>
             ) : (
               sentinelScenes.map((scene) => (
                 <div
@@ -222,6 +286,7 @@ export default function DataSourcesPage() {
               ))
             )}
           </div>
+          )}
         </div>
       </div>
     </AppLayout>

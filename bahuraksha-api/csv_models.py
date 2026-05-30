@@ -329,10 +329,12 @@ class ZoneRiskItem(BaseModel):
     flood_probability: float; landslide_probability: float; rainfall_score: float
     composite_score: float; risk_level: str
     flood_predicted_event: int; landslide_predicted_event: int; data_quality: str
+    data_source: str = "live"
 
 
 class LiveZoneRiskResponse(BaseModel):
     model_config = {"protected_namespaces": ()}
     requested_date: str | None; data_date: str; generated_at_utc: str
     source: str; formula: str; model_versions: dict[str, str]
+    data_source: str = "live"
     zones: list[ZoneRiskItem]

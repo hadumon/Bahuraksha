@@ -27,6 +27,7 @@ export type LandslidePrediction = {
   secondaryDrivers: string[];
   confidence: number;
   timeHorizonHours: number;
+  isMock?: boolean;
 };
 
 export type LandslideZoneInput = LandslideInput & {
@@ -93,7 +94,9 @@ export async function predictLandslideRisk(
     const data = await response.json();
     return fromApiPrediction(data);
   } catch {
-    return fallbackPrediction(input, timeHorizonHours);
+    const fallback = fallbackPrediction(input, timeHorizonHours);
+    fallback.isMock = true;
+    return fallback;
   }
 }
 
@@ -122,6 +125,7 @@ export async function predictBatchLandslideRisk(
   } catch {
     return inputs.map((input) => ({
       ...fallbackPrediction(input, timeHorizonHours),
+      isMock: true,
       id: input.id,
       name: input.name,
       district: input.district,
