@@ -25,6 +25,8 @@ export default defineConfig({
       output: {
         manualChunks: {
           vendor: ["react", "react-dom"],
+          motion: ["framer-motion"],
+          supabase: ["@supabase/supabase-js"],
           charts: ["recharts"],
           maps: ["leaflet"],
           three: ["@react-three/fiber", "@react-three/drei", "three"],

@@ -48,48 +48,24 @@ function skeletonVariant(path: string) {
   return "default";
 }
 
-// Page transition wrapper
 function PageTransition({ children }: { children: React.ReactNode }) {
   const location = useLocation();
-
   return (
-    <AnimatePresence mode="wait">
-      <motion.div
-        key={location.pathname}
-        initial={{ opacity: 0, y: 10 }}
-        animate={{ opacity: 1, y: 0 }}
-        exit={{ opacity: 0, y: -10 }}
-        transition={{ duration: 0.2, ease: [0.4, 0, 0.2, 1] }}
-        className="min-h-screen"
-      >
-        {children}
-      </motion.div>
-    </AnimatePresence>
+    <motion.div
+      key={location.pathname}
+      initial={{ opacity: 0, y: 10 }}
+      animate={{ opacity: 1, y: 0 }}
+      exit={{ opacity: 0, y: -10 }}
+      transition={{ duration: 0.2, ease: [0.4, 0, 0.2, 1] }}
+      className="min-h-screen"
+    >
+      {children}
+    </motion.div>
   );
 }
 
-// Animated Routes component
 function AnimatedRoutes() {
   const location = useLocation();
-
-  const getComponent = (path: string) => {
-    switch (path) {
-      case "/": return <LandingPage />;
-      case "/login": return <LoginPage />;
-      case "/dashboard": return <Index />;
-      case "/risk-map": return <RiskMapPage />;
-      case "/monitoring": return <MonitoringPage />;
-      case "/alerts": return <AlertsPage />;
-      case "/citizen-reports": return <CitizenReportsPage />;
-      case "/data-sources": return <DataSourcesPage />;
-      case "/about": return <AboutPage />;
-
-      case "/landslides": return <LandslidesPage />;
-      case "/blog": return <BlogPage />;
-      case "/disasters": return <DisastersPage />;
-      default: return null;
-    }
-  };
 
   return (
     <AnimatePresence mode="wait">
