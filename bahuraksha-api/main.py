@@ -385,6 +385,7 @@ class WhatsAppNotificationRequest(BaseModel):
     title: str = Field(..., max_length=200, description="Alert title")
     message: str = Field(..., max_length=1000, description="Alert body text")
     severity: str = Field(default="watch", pattern=r"^(safe|watch|warning|evacuate)$")
+    to_number: str | None = Field(default=None, description="Recipient phone number (E.164 format), defaults to DEMO_WHATSAPP_NUMBER")
 
 
 @app.post("/notify/whatsapp", response_model=dict)
@@ -396,6 +397,7 @@ def notify_whatsapp(request: Request, payload: WhatsAppNotificationRequest) -> d
         message=payload.message,
         zone=payload.zone,
         severity=payload.severity,
+        to_number=payload.to_number,
     )
     result["severity"] = payload.severity
     result["zone"] = payload.zone

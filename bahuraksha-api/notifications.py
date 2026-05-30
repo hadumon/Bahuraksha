@@ -30,6 +30,7 @@ def send_whatsapp_alert(
     message: str,
     zone: str,
     severity: str,
+    to_number: str | None = None,
 ) -> dict:
     """Send a single WhatsApp alert message.
 
@@ -42,17 +43,19 @@ def send_whatsapp_alert(
     )
 
     if _twilio_client:
+        recipient = to_number or DEMO_WHATSAPP_NUMBER
         try:
             _twilio_client.messages.create(
                 body=body,
                 from_=f"whatsapp:{TWILIO_WHATSAPP_FROM}",
-                to=f"whatsapp:{DEMO_WHATSAPP_NUMBER}",
+                to=f"whatsapp:{recipient}",
             )
-            log.info("WhatsApp alert sent via Twilio: %s — %s", zone, title[:40])
+            log.info("WhatsApp alert sent via Twilio to %s: %s — %s", recipient, zone, title[:40])
             return {"status": "sent", "recipients": 1}
         except Exception as e:
             log.warning("Twilio send failed, falling back to simulation: %s", e)
 
-    log.info("[SIMULATED] WhatsApp alert: %s — %s", zone, title[:40])
+    recipient = to_number or DEMO_WHATSAPP_NUMBER
+    log.info("[SIMULATED] WhatsApp alert to %s: %s — %s", recipient, zone, title[:40])
     log.info("[SIMULATED] Message: %s", body[:200])
-    return {"status": "simulated", "recipients": 45, "note": "Twilio not configured — alert logged"}
+    return {"status": "simulated", "recipients": 45 if not to_number else 1, "note": "Twilio not configured — alert logged"}
