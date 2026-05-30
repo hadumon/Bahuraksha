@@ -60,10 +60,6 @@ export default function AdminUsersPage() {
   }
 
   async function handleRoleChange(profileId: string, newRole: string) {
-    if (newRole === user?.id && profileId === user?.id) {
-      toast.error("You cannot change your own role");
-      return;
-    }
     setUpdatingId(profileId);
     try {
       const { error } = await supabase

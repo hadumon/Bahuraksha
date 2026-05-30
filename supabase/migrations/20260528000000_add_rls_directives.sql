@@ -90,16 +90,13 @@ CREATE POLICY "alerts_delete_policy" ON public.alerts
   USING (public.has_role('admin') OR public.has_role('ops'));
 
 -- ─── Citizen Reports RLS ─────────────────────────────────────────────────────
--- All authenticated can read
+-- Only roles with view:citizen-reports permission can read all reports
 DROP POLICY IF EXISTS "citizen_reports_select_policy" ON public.citizen_reports;
 CREATE POLICY "citizen_reports_select_policy" ON public.citizen_reports
   FOR SELECT
   USING (
     auth.role() = 'authenticated'
-    AND (
-      public.current_user_role() IN ('admin', 'ops', 'field', 'analyst')
-      OR auth.uid() = (SELECT id FROM public.profiles WHERE id = auth.uid())
-    )
+    AND public.current_user_role() IN ('admin', 'ops', 'field', 'analyst')
   );
 
 -- Anyone authenticated can insert (field officers + general users)

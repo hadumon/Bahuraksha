@@ -9,21 +9,21 @@ import { Textarea } from '@/components/ui/textarea';
 import { toast } from 'sonner';
 import { predictLandslideRisk } from '@/lib/landslideModel';
 
-const typeLabels: Record<string, string> = {
+const typeLabels = {
   rising_water: 'Rising Water',
   cracks: 'Ground Cracks',
   blocked_drain: 'Blocked Drain',
   landslide_signs: 'Landslide Signs',
   other: 'Other',
-};
+} as const;
 
-const typeIcons: Record<string, string> = {
+const typeIcons = {
   rising_water: '🌊',
   cracks: '⚠️',
   blocked_drain: '🚧',
   landslide_signs: '⛰️',
   other: '📝',
-};
+} as const;
 
 type CitizenReportType = keyof typeof typeLabels;
 
@@ -121,12 +121,12 @@ export default function CitizenReportsPage() {
     const lng = userLocation?.lng ?? 85.324;
 
     const { error } = await supabase.from('citizen_reports').insert({
-      type: formData.type as string,
+      type: formData.type,
       description: formData.description,
       location_name: formData.location,
       location_lat: lat,
       location_lng: lng,
-    } as never);
+    });
 
     setSubmitting(false);
     if (error) {
@@ -212,7 +212,7 @@ export default function CitizenReportsPage() {
                   onChange={(e) => setFormData((prev) => ({ ...prev, type: e.target.value as CitizenReportType }))}
                   className="w-full bg-secondary border border-border rounded-lg px-3 py-2 text-sm text-foreground"
                 >
-                  {Object.entries(typeLabels).map(([val, label]) => (
+                  {(Object.entries(typeLabels) as [CitizenReportType, string][]).map(([val, label]) => (
                     <option key={val} value={val}>
                       {typeIcons[val]} {label}
                     </option>
