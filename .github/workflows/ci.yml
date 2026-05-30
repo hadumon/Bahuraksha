@@ -71,19 +71,18 @@ jobs:
       - name: Verify landslide training pipeline
         run: python train_landslide_model.py --dry-run --n-estimators 50 --max-depth 4
       - name: Verify models load and predict
-        run: python -c "
-import joblib, json
-from pathlib import Path
-from csv_models import _build_feature_row
+        shell: python
+        run: |
+          import joblib
+          from pathlib import Path
 
-for name in ['flood_model.pkl', 'landslide_model.pkl']:
-    b = joblib.load(Path('models') / name)
-    assert 'model' in b
-    assert 'threshold' in b
-    assert 'feature_columns' in b
-    assert len(b['feature_columns']) > 10
-    print(f'OK: {name} - {len(b[\"feature_columns\"])} features')
-"
+          for name in ['flood_model.pkl', 'landslide_model.pkl']:
+              b = joblib.load(Path('models') / name)
+              assert 'model' in b
+              assert 'threshold' in b
+              assert 'feature_columns' in b
+              assert len(b['feature_columns']) > 10
+              print(f'OK: {name} - {len(b["feature_columns"])} features')
       - name: Precompute fallback snapshot
         run: python precompute_snapshots.py
 

@@ -21,8 +21,8 @@ export default function DemoBanner() {
   if (!isTestMode && !isMock) return null;
 
   return (
-    <div className="relative z-50 flex items-center justify-center gap-3 bg-gradient-to-r from-risk-warning/90 via-risk-evacuate/80 to-risk-warning/90 px-4 py-2 text-xs font-medium text-white shadow-lg">
-      <AlertTriangle className="h-3.5 w-3.5 flex-shrink-0" />
+    <div className="relative z-50 flex items-center justify-center gap-3 bg-linear-to-r from-risk-warning/90 via-risk-evacuate/80 to-risk-warning/90 px-4 py-2 text-xs font-medium text-white shadow-lg">
+      <AlertTriangle className="h-3.5 w-3.5 shrink-0" />
       <span>
         Demo Mode — All data is simulated for demonstration purposes.{" "}
         {isTestMode && "(Auth is disabled)"}
