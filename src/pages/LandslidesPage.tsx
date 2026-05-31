@@ -1,11 +1,14 @@
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useRef } from "react";
 import { useQuery } from "@tanstack/react-query";
 import AppLayout from "@/components/layout/AppLayout";
 import { Mountain, AlertTriangle, CloudRain, Activity, MapPin, ChevronRight, Wind, Loader2 } from "lucide-react";
 import { Area, AreaChart, ResponsiveContainer, Tooltip, XAxis, YAxis, CartesianGrid } from "recharts";
 import { motion } from "framer-motion";
+import { toast } from "sonner";
 import { predictBatchLandslideRisk, checkApiHealth, computeBatchHeuristic, type LandslideZoneInput, type LandslidePrediction } from "@/lib/landslideModel";
 import { fetchRainfallForecasts, type RiskLevel } from "@/lib/operationalData";
+import { persistLandslidePredictions } from "@/lib/landslidePersistence";
+import { sendWhatsAppAlert } from "@/lib/bahuraksha-api";
 
 const sampleZones: LandslideZoneInput[] = [
   {
@@ -137,6 +140,59 @@ export default function LandslidesPage() {
   }, [zonesWithForecast]);
 
   const [activeZone, setActiveZone] = useState<(LandslidePrediction & { id: string; name: string; district: string; coordinates: [number, number]; slopeAngleDeg: number; soilMoisturePct: number; rainfall7DayMm: number; rainfallTodayMm: number; seismicActivityMg: number; vegetationCoverPct: number; elevationM: number; distanceToRoadKm: number }) | null>(null);
+  const prevPredictionsRef = useRef<string>("");
+
+  useEffect(() => {
+    if (!predictions.length) return;
+    const key = predictions.map((p) => `${p.id}:${p.riskLevel}:${p.probability}`).join("|");
+    if (key === prevPredictionsRef.current) return;
+    prevPredictionsRef.current = key;
+
+    const records = predictions.map((p, i) => ({
+      zone_id: p.id,
+      zone_name: p.name,
+      district: zonesWithForecast[i]?.district ?? "N/A",
+      coordinates: zonesWithForecast[i]?.coordinates ?? [0, 0] as [number, number],
+      probability: p.probability,
+      risk_level: p.riskLevel,
+      susceptibility_score: p.susceptibilityScore,
+      primary_driver: p.primaryDriver,
+      secondary_drivers: p.secondaryDrivers,
+      confidence: p.confidence,
+      time_horizon_hours: p.timeHorizonHours,
+      model_source: apiAvailable ? "ml-api" as const : "heuristic" as const,
+    }));
+
+    persistLandslidePredictions(records).then((result) => {
+      if (result.error) {
+        console.warn("Landslide persistence:", result.error);
+      } else if (result.inserted > 0) {
+        console.info(`Persisted ${result.inserted} landslide predictions`);
+      }
+    });
+
+    const highRisk = predictions.filter(
+      (p) => p.riskLevel === "evacuate" || p.riskLevel === "warning",
+    );
+    for (const pred of highRisk) {
+      sendWhatsAppAlert({
+        zone: pred.name,
+        title: `Landslide ${pred.riskLevel === "evacuate" ? "Evacuation" : "Warning"}: ${pred.name}`,
+        message: `ML model predicts ${pred.riskLevel} risk (${Math.round(pred.probability * 100)}% probability). Primary driver: ${pred.primaryDriver}`,
+        severity: pred.riskLevel,
+      }).then((wa) => {
+        if (wa.status === "sent") {
+          toast.success("WhatsApp alert sent", {
+            description: `${pred.name}: ${pred.riskLevel} risk`,
+          });
+        } else {
+          toast.info("Alert created", {
+            description: `${pred.name}: ${pred.riskLevel} risk (Twilio not configured)`,
+          });
+        }
+      });
+    }
+  }, [predictions, zonesWithForecast, apiAvailable]);
 
   useEffect(() => {
     if (predictions.length > 0 && !activeZone) {

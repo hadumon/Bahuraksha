@@ -1,3 +1,4 @@
+import { useEffect, useRef } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Satellite, Brain, AlertTriangle, Radar, Waves, CloudRain, Clock } from "lucide-react";
 import {
@@ -14,7 +15,9 @@ import {
 } from "recharts";
 import AppLayout from "@/components/layout/AppLayout";
 import ModelStatusPanel from "@/components/dashboard/ModelStatusPanel";
-import { getLatest, getHistory, RISK_LEVEL } from "@/lib/bahuraksha-api";
+import { toast } from "sonner";
+import { supabase } from "@/integrations/supabase/client";
+import { getLatest, getHistory, sendWhatsAppAlert } from "@/lib/bahuraksha-api";
 import { fetchRainfallForecasts } from "@/lib/operationalData";
 import { normalizeRainfallForecasts, summarizeRainfall } from "@/lib/riskEngine";
 
@@ -81,6 +84,50 @@ export default function FloodDetectionPage() {
   const riskScore = latest?.risk_score ?? null;
   const confidence = latest?.confidence ?? null;
   const label = latest?.label ?? null;
+  const prevFloodKey = useRef<string>("");
+
+  useEffect(() => {
+    if (riskScore === null || confidence === null || !label) return;
+    const key = `${riskScore}:${confidence}:${label}`;
+    if (key === prevFloodKey.current) return;
+    prevFloodKey.current = key;
+
+    const severity = riskScore >= 75 ? "evacuate" as const : riskScore >= 50 ? "warning" as const : null;
+
+    if (severity) {
+      supabase.from("alerts").insert({
+        title: `Flood ${severity === "evacuate" ? "Evacuation" : "Warning"}: Bagmati Basin`,
+        message: `Satellite model predicts ${severity} risk (score: ${riskScore}/100, confidence: ${Math.round(confidence * 100)}%). ${label === "flood_water" ? "Water detected in satellite imagery." : "Elevated risk conditions detected."}`,
+        zone: "Bagmati Basin",
+        type: "flood",
+        severity,
+        is_active: true,
+      }).then(({ error }) => {
+        if (error) {
+          console.warn("Flood alert insert:", error.message);
+        } else {
+          console.info("Flood alert created in database");
+        }
+      });
+
+      sendWhatsAppAlert({
+        zone: "Bagmati Basin",
+        title: `Flood ${severity === "evacuate" ? "Evacuation" : "Warning"}: Bagmati Basin`,
+        message: `Satellite model predicts ${severity} risk (score: ${riskScore}/100, confidence: ${Math.round(confidence * 100)}%). ${label === "flood_water" ? "Water detected in satellite imagery." : "Elevated risk conditions detected."}`,
+        severity,
+      }).then((wa) => {
+        if (wa.status === "sent") {
+          toast.success("WhatsApp alert sent", {
+            description: `Bagmati Basin: ${severity} risk`,
+          });
+        } else {
+          toast.info("Alert created", {
+            description: `Bagmati Basin: ${severity} risk (Twilio not configured)`,
+          });
+        }
+      });
+    }
+  }, [riskScore, confidence, label, predictionError]);
 
   return (
     <AppLayout>
