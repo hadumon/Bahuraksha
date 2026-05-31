@@ -101,7 +101,7 @@ export default function FloodDetectionPage() {
         zone: "Bagmati Basin",
         type: "flood",
         severity,
-        is_active: true,
+        is_active: false,
       }).then(({ error }) => {
         if (error) {
           console.warn("Flood alert insert:", error.message);

@@ -268,7 +268,7 @@ export default function AlertsPage() {
               >
                 <div className="flex items-start gap-4">
                   <div
-                    className={`w-10 h-10 rounded-lg flex items-center justify-center flex-shrink-0 ${
+                    className={`w-10 h-10 rounded-lg flex items-center justify-center shrink-0 ${
                       alert.severity === "evacuate"
                         ? "bg-risk-evacuate/20"
                         : alert.severity === "warning"
@@ -296,9 +296,13 @@ export default function AlertsPage() {
                       <span className="text-xs font-mono text-muted-foreground bg-secondary px-2 py-0.5 rounded">
                         {typeLabels[alert.type]}
                       </span>
-                      {!alert.is_active && (
-                        <span className="flex items-center gap-1 text-xs text-muted-foreground">
-                          <BellOff className="w-3 h-3" /> Resolved
+                      {!alert.is_active ? (
+                        <span className="flex items-center gap-1 text-xs text-amber-600 bg-amber-50 dark:bg-amber-950/30 px-2 py-0.5 rounded">
+                          <BellOff className="w-3 h-3" /> Pending
+                        </span>
+                      ) : (
+                        <span className="flex items-center gap-1 text-xs text-green-600 bg-green-50 dark:bg-green-950/30 px-2 py-0.5 rounded">
+                          <Bell className="w-3 h-3" /> Approved
                         </span>
                       )}
                     </div>
@@ -313,6 +317,47 @@ export default function AlertsPage() {
                       <span>
                         {new Date(alert.created_at ?? "").toLocaleString()}
                       </span>
+                    </div>
+                    <div className="flex items-center gap-2 mt-3">
+                      {!alert.is_active ? (
+                        <button
+                          onClick={() => {
+                            supabase
+                              .from("alerts")
+                              .update({ is_active: true })
+                              .eq("id", alert.id)
+                              .then(({ error }) => {
+                                if (error) toast.error("Failed to approve", { description: error.message });
+                                else {
+                                  toast.success("Alert approved");
+                                  queryClient.invalidateQueries({ queryKey: ["alerts"] });
+                                }
+                              });
+                          }}
+                          className="text-xs bg-primary text-white px-3 py-1.5 rounded-md hover:bg-primary/90"
+                        >
+                          Approve
+                        </button>
+                      ) : (
+                        <button
+                          onClick={() => {
+                            supabase
+                              .from("alerts")
+                              .update({ is_active: false })
+                              .eq("id", alert.id)
+                              .then(({ error }) => {
+                                if (error) toast.error("Failed to dismiss", { description: error.message });
+                                else {
+                                  toast.success("Alert dismissed");
+                                  queryClient.invalidateQueries({ queryKey: ["alerts"] });
+                                }
+                              });
+                          }}
+                          className="text-xs bg-muted text-muted-foreground px-3 py-1.5 rounded-md hover:bg-border"
+                        >
+                          Dismiss
+                        </button>
+                      )}
                     </div>
                   </div>
                 </div>

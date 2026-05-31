@@ -187,7 +187,7 @@ export default function LandslideMap({ className = "" }: { className?: string })
       </div>
       <div
         ref={mapRef}
-        className="w-full h-full min-h-[300px] sm:min-h-[400px] md:min-h-[500px]"
+        className="w-full h-full min-h-75 sm:min-h-100 md:min-h-125"
         style={{ background: "hsl(220, 20%, 7%)" }}
       />
     </div>

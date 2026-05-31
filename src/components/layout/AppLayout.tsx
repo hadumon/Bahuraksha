@@ -37,7 +37,7 @@ export default function AppLayout({ children }: { children: ReactNode }) {
       )}
 
       <main className={`min-h-screen transition-all duration-200 ${
-        isMobile ? 'ml-0 pt-14' : 'ml-[260px]'
+        isMobile ? 'ml-0 pt-14' : 'ml-65'
       }`}>
         {children}
       </main>

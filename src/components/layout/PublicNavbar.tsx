@@ -31,7 +31,7 @@ export function PublicNavbar() {
               alt="Bahuraksha Logo"
               className="w-10 h-10 object-contain group-hover:scale-105 transition-transform"
             />
-            <span className="font-bold text-lg tracking-tight bg-gradient-to-r from-foreground to-foreground/80 bg-clip-text">
+            <span className="font-bold text-lg tracking-tight bg-linear-to-r from-foreground to-foreground/80 bg-clip-text">
               BAHURAKSHA
             </span>
           </Link>
@@ -66,7 +66,7 @@ export function PublicNavbar() {
                   <Menu className="w-5 h-5" />
                 </button>
               </SheetTrigger>
-              <SheetContent side="right" className="w-[260px] p-0">
+              <SheetContent side="right" className="w-65 p-0">
                 <SheetHeader className="px-4 py-5 border-b border-border">
                   <SheetTitle className="text-left text-base">Navigation</SheetTitle>
                 </SheetHeader>
