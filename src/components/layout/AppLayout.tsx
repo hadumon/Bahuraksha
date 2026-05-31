@@ -1,5 +1,6 @@
 import { ReactNode, useState } from 'react';
 import AppSidebar from './AppSidebar';
+import ApiDegradationBanner from '@/components/ApiDegradationBanner';
 import { Menu } from 'lucide-react';
 import { useIsMobile } from '@/hooks/use-mobile';
 
@@ -9,6 +10,7 @@ export default function AppLayout({ children }: { children: ReactNode }) {
 
   return (
     <div className="min-h-screen bg-background overflow-x-hidden">
+      <ApiDegradationBanner />
       {/* Mobile overlay */}
       {isMobile && mobileOpen && (
         <div

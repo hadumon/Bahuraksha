@@ -24,15 +24,9 @@ describe("getHistory", () => {
     expect(result.history[0].label).toBe("dry_land");
   });
 
-  it("returns fallback history when API call fails", async () => {
+  it("throws instead of returning generated history when API call fails", async () => {
     mockFetch.mockRejectedValueOnce(new Error("Network error"));
 
-    const result = await getHistory(3);
-
-    expect(result.history).toHaveLength(3);
-    expect(result.history[0]).toHaveProperty("date");
-    expect(result.history[0]).toHaveProperty("label");
-    expect(result.history[0]).toHaveProperty("risk_score");
-    expect(result.history[0]).toHaveProperty("confidence");
+    await expect(getHistory(3)).rejects.toThrow("Network error");
   });
 });

@@ -1,4 +1,4 @@
-import { FormEvent, useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import AppLayout from "@/components/layout/AppLayout";
 import AlertFeed from "@/components/dashboard/AlertFeed";
@@ -134,6 +134,19 @@ export default function AlertsPage() {
   return (
     <AppLayout>
       <div className="p-4 md:p-6 space-y-6">
+        <div className="rounded-lg border border-amber-500/30 bg-amber-50 dark:bg-amber-950/20 px-4 py-3 flex items-start gap-3">
+          <BellOff className="w-5 h-5 text-amber-600 shrink-0 mt-0.5" />
+          <div className="text-sm">
+            <p className="font-medium text-amber-800 dark:text-amber-300">WhatsApp notifications not configured</p>
+            <p className="text-amber-700 dark:text-amber-400 mt-0.5">
+              Add <code className="text-xs bg-amber-100 dark:bg-amber-900/50 px-1 rounded">TWILIO_ACCOUNT_SID</code> and{" "}
+              <code className="text-xs bg-amber-100 dark:bg-amber-900/50 px-1 rounded">TWILIO_AUTH_TOKEN</code> to{" "}
+              <code className="text-xs bg-amber-100 dark:bg-amber-900/50 px-1 rounded">.env</code> to send real WhatsApp alerts.
+              Currently all alerts are <strong>simulated</strong>.
+            </p>
+          </div>
+        </div>
+
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
           <div>
             <h1 className="text-xl md:text-2xl font-bold text-foreground">
@@ -254,7 +267,7 @@ export default function AlertsPage() {
                 <AlertFeed
                   alerts={alerts.map((alert) => ({
                     ...alert,
-                    timestamp: alert.created_at ?? new Date().toISOString(),
+                    timestamp: alert.created_at ?? "—",
                   }))}
                 />
               )}
@@ -345,34 +358,37 @@ export default function AlertsPage() {
                     <div className="flex items-center gap-2 mt-3">
                       {isPending && (
                         <button
-                          onClick={() => {
-                            supabase
-                              .from("alerts")
-                              .update({ is_active: true, status: "approved" })
-                              .eq("id", alert.id)
-                              .then(async ({ error }) => {
-                                if (error) {
-                                  toast.error("Failed to approve", { description: error.message });
-                                } else {
-                                  toast.success("Alert approved");
-                                  queryClient.invalidateQueries({ queryKey: ["alerts"] });
-                                  const wa = await sendWhatsAppAlert({
-                                    zone: alert.zone,
-                                    title: alert.title,
-                                    message: alert.message,
-                                    severity: alert.severity,
+                          onClick={async () => {
+                            try {
+                              const { error } = await supabase
+                                .from("alerts")
+                                .update({ is_active: true, status: "approved" })
+                                .eq("id", alert.id);
+                              if (error) {
+                                toast.error("Failed to approve", { description: error.message });
+                              } else {
+                                toast.success("Alert approved");
+                                queryClient.invalidateQueries({ queryKey: ["alerts"] });
+                                const wa = await sendWhatsAppAlert({
+                                  zone: alert.zone,
+                                  title: alert.title,
+                                  message: alert.message,
+                                  severity: alert.severity,
+                                });
+                                if (wa.status === "sent") {
+                                  toast.success("WhatsApp alert sent", {
+                                    description: `${alert.zone}: ${alert.severity} risk`,
                                   });
-                                  if (wa.status === "sent") {
-                                    toast.success("WhatsApp alert sent", {
-                                      description: `${alert.zone}: ${alert.severity} risk`,
-                                    });
-                                  } else {
-                                    toast.info("WhatsApp not configured", {
-                                      description: wa.note ?? "Alert approved locally",
-                                    });
-                                  }
+                                } else {
+                                  toast.info("WhatsApp not configured", {
+                                    description: wa.note ?? "Alert approved locally",
+                                  });
                                 }
-                              });
+                              }
+                            } catch (err) {
+                              console.error("Failed to approve alert:", err);
+                              toast.error("Failed to approve alert");
+                            }
                           }}
                           className="text-xs bg-primary text-white px-3 py-1.5 rounded-md hover:bg-primary/90"
                         >
@@ -381,18 +397,22 @@ export default function AlertsPage() {
                       )}
                       {(isPending || isApproved) && (
                         <button
-                          onClick={() => {
-                            supabase
-                              .from("alerts")
-                              .update({ is_active: false, status: "dismissed" })
-                              .eq("id", alert.id)
-                              .then(({ error }) => {
-                                if (error) toast.error("Failed to dismiss", { description: error.message });
-                                else {
-                                  toast.success("Alert dismissed");
-                                  queryClient.invalidateQueries({ queryKey: ["alerts"] });
-                                }
-                              });
+                          onClick={async () => {
+                            try {
+                              const { error } = await supabase
+                                .from("alerts")
+                                .update({ is_active: false, status: "dismissed" })
+                                .eq("id", alert.id);
+                              if (error) {
+                                toast.error("Failed to dismiss", { description: error.message });
+                              } else {
+                                toast.success("Alert dismissed");
+                                queryClient.invalidateQueries({ queryKey: ["alerts"] });
+                              }
+                            } catch (err) {
+                              console.error("Failed to dismiss alert:", err);
+                              toast.error("Failed to dismiss alert");
+                            }
                           }}
                           className="text-xs bg-muted text-muted-foreground px-3 py-1.5 rounded-md hover:bg-border"
                         >

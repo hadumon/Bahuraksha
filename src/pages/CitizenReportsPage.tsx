@@ -107,7 +107,8 @@ export default function CitizenReportsPage() {
             : r,
         ),
       );
-    } catch {
+    } catch (e) {
+      console.error('ML risk check failed:', e);
       toast.error('ML check failed');
     } finally {
       setMlChecking((prev) => ({ ...prev, [report.id]: false }));

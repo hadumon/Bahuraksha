@@ -1,5 +1,6 @@
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
+import { useQuery } from "@tanstack/react-query";
 import {
   LayoutDashboard,
   Map,
@@ -17,6 +18,7 @@ import {
 import { useAuth } from "@/components/auth/useAuth";
 import { cn } from "@/lib/utils";
 import { hasPermission } from "@/lib/permissions";
+import { supabase } from "@/integrations/supabase/client";
 
 interface NavItemDef {
   path: string;
@@ -68,6 +70,19 @@ export default function AppSidebar({ isMobile, mobileOpen, onClose }: Props) {
   const { user, userRole, signOut } = useAuth();
   const navigate = useNavigate();
 
+  const { data: pendingAlerts = 0 } = useQuery({
+    queryKey: ["sidebar-pending-alerts"],
+    queryFn: async () => {
+      const { count } = await supabase
+        .from("alerts")
+        .select("*", { count: "exact", head: true })
+        .eq("status", "pending");
+      return count ?? 0;
+    },
+    refetchInterval: 60_000,
+    staleTime: 30_000,
+  });
+
   const handleLogout = async () => {
     await signOut();
     navigate("/login");
@@ -86,7 +101,7 @@ export default function AppSidebar({ isMobile, mobileOpen, onClose }: Props) {
           </button>
         )}
       </div>
-      <NavList location={location} userRole={userRole} onNavigate={isMobile ? onClose : undefined} />
+      <NavList location={location} userRole={userRole} pendingAlerts={pendingAlerts} onNavigate={isMobile ? onClose : undefined} />
       <div className="px-3 py-4 border-t border-sidebar-border mt-auto">
         {user ? (
           <div className="space-y-3">
@@ -153,10 +168,12 @@ export default function AppSidebar({ isMobile, mobileOpen, onClose }: Props) {
 function NavList({
   location,
   userRole,
+  pendingAlerts,
   onNavigate,
 }: {
   location: ReturnType<typeof useLocation>;
   userRole: string | null;
+  pendingAlerts?: number;
   onNavigate?: () => void;
 }) {
   const skipAuth = import.meta.env.VITE_DISABLE_AUTH === "true";
@@ -198,6 +215,11 @@ function NavList({
               )}
             />
             <span className="truncate font-medium">{item.label}</span>
+            {item.path === "/alerts" && pendingAlerts !== undefined && pendingAlerts > 0 && (
+              <span className="ml-auto flex items-center justify-center min-w-[20px] h-5 px-1.5 rounded-full bg-amber-500 text-[10px] font-bold text-white">
+                {pendingAlerts > 99 ? "99+" : pendingAlerts}
+              </span>
+            )}
             {isActive && <div className="absolute inset-0 bg-ocean-400/5 rounded-xl" />}
           </Link>
         );

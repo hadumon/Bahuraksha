@@ -1,7 +1,7 @@
 import { useEffect, useRef } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { predictBatchLandslideRisk, checkApiHealth, type LandslideZoneInput } from "@/lib/landslideModel";
 import type { RiskLevel } from "@/lib/operationalData";
+import { fetchLatestLandslidePredictions } from "@/lib/landslidePersistence";
 import "leaflet/dist/leaflet.css";
 
 const riskColors: Record<RiskLevel, string> = {
@@ -11,55 +11,17 @@ const riskColors: Record<RiskLevel, string> = {
   evacuate: "#ef4444",
 };
 
-const NEPAL_LANDSLIDE_ZONES: LandslideZoneInput[] = [
-  { id: "1", name: "Sindhupalchok", district: "Sindhupalchok", coordinates: [27.78, 85.85], slopeAngleDeg: 42, soilMoisturePct: 88, rainfall7DayMm: 320, rainfallTodayMm: 65, seismicActivityMg: 0.015, vegetationCoverPct: 25, elevationM: 1800, distanceToRoadKm: 0.3 },
-  { id: "2", name: "Rasuwa", district: "Rasuwa", coordinates: [28.15, 85.35], slopeAngleDeg: 38, soilMoisturePct: 75, rainfall7DayMm: 210, rainfallTodayMm: 35, seismicActivityMg: 0.008, vegetationCoverPct: 45, elevationM: 2200, distanceToRoadKm: 0.8 },
-  { id: "3", name: "Dolakha", district: "Dolakha", coordinates: [27.67, 86.18], slopeAngleDeg: 28, soilMoisturePct: 55, rainfall7DayMm: 120, rainfallTodayMm: 15, seismicActivityMg: 0.003, vegetationCoverPct: 65, elevationM: 1400, distanceToRoadKm: 2.5 },
-  { id: "4", name: "Gorkha", district: "Gorkha", coordinates: [28.00, 84.63], slopeAngleDeg: 35, soilMoisturePct: 70, rainfall7DayMm: 180, rainfallTodayMm: 25, seismicActivityMg: 0.005, vegetationCoverPct: 50, elevationM: 1600, distanceToRoadKm: 1.2 },
-  { id: "5", name: "Kaski", district: "Kaski", coordinates: [28.24, 83.98], slopeAngleDeg: 32, soilMoisturePct: 60, rainfall7DayMm: 150, rainfallTodayMm: 20, seismicActivityMg: 0.002, vegetationCoverPct: 55, elevationM: 1200, distanceToRoadKm: 1.8 },
-  { id: "6", name: "Lamjung", district: "Lamjung", coordinates: [28.22, 84.38], slopeAngleDeg: 40, soilMoisturePct: 80, rainfall7DayMm: 250, rainfallTodayMm: 45, seismicActivityMg: 0.01, vegetationCoverPct: 35, elevationM: 1800, distanceToRoadKm: 0.6 },
-  { id: "7", name: "Myagdi", district: "Myagdi", coordinates: [28.42, 83.55], slopeAngleDeg: 45, soilMoisturePct: 65, rainfall7DayMm: 160, rainfallTodayMm: 18, seismicActivityMg: 0.004, vegetationCoverPct: 40, elevationM: 2000, distanceToRoadKm: 1.5 },
-  { id: "8", name: "Baglung", district: "Baglung", coordinates: [28.27, 83.60], slopeAngleDeg: 38, soilMoisturePct: 72, rainfall7DayMm: 200, rainfallTodayMm: 30, seismicActivityMg: 0.006, vegetationCoverPct: 48, elevationM: 1500, distanceToRoadKm: 0.9 },
-];
-
-export type LandslidePredictionResult = {
-  id: string;
-  name: string;
-  district: string;
-  coordinates: [number, number];
-  probability: number;
-  riskLevel: RiskLevel;
-  primaryDriver: string;
-  confidence: number;
-};
-
 export default function LandslideMap({ className = "" }: { className?: string }) {
   const mapRef = useRef<HTMLDivElement>(null);
   const mapInstanceRef = useRef<any>(null);
   const overlaysRef = useRef<any[]>([]);
   const resizeObserverRef = useRef<ResizeObserver | null>(null);
 
-  const { data: apiAvailable = false } = useQuery({
-    queryKey: ["landslide-api-health"],
-    queryFn: checkApiHealth,
-    staleTime: 1000 * 60 * 5,
-    retry: 1,
-  });
-
   const { data: predictions = [], isLoading } = useQuery({
-    queryKey: ["landslide-predictions", apiAvailable],
+    queryKey: ["landslide-predictions", "supabase", "ml-api"],
     queryFn: async () => {
-      const results = await predictBatchLandslideRisk(NEPAL_LANDSLIDE_ZONES);
-      return results.map((r, i) => ({
-        id: r.id,
-        name: r.name,
-        district: r.district,
-        coordinates: NEPAL_LANDSLIDE_ZONES[i].coordinates,
-        probability: r.probability,
-        riskLevel: r.riskLevel,
-        primaryDriver: r.primaryDriver,
-        confidence: r.confidence,
-      })) as LandslidePredictionResult[];
+      const rows = await fetchLatestLandslidePredictions();
+      return rows.filter((row) => row.model_source === "ml-api");
     },
     staleTime: 1000 * 60 * 10,
   });
@@ -102,7 +64,7 @@ export default function LandslideMap({ className = "" }: { className?: string })
   }, []);
 
   useEffect(() => {
-    if (!mapInstanceRef.current || !predictions.length) return;
+    if (!mapInstanceRef.current) return;
 
     let cancelled = false;
 
@@ -115,7 +77,7 @@ export default function LandslideMap({ className = "" }: { className?: string })
       overlaysRef.current = [];
 
       predictions.forEach((pred) => {
-        const color = riskColors[pred.riskLevel];
+        const color = riskColors[pred.risk_level];
         const radius = Math.max(12, pred.probability * 40);
 
         const circle = L.circleMarker(pred.coordinates, {
@@ -128,13 +90,14 @@ export default function LandslideMap({ className = "" }: { className?: string })
 
         circle.bindPopup(
           createPopupNode([
-            [pred.name, true],
+            [pred.zone_name, true],
             [pred.district],
-            [`Risk: ${pred.riskLevel.toUpperCase()}`],
+            [`Risk: ${pred.risk_level.toUpperCase()}`],
             [`Probability: ${(pred.probability * 100).toFixed(1)}%`],
-            [`Primary driver: ${pred.primaryDriver}`],
+            [`Primary driver: ${pred.primary_driver}`],
             [`Confidence: ${(pred.confidence * 100).toFixed(0)}%`],
-            [`Model: ${apiAvailable ? "XGBoost ML" : "Heuristic fallback"}`],
+            [`Observed: ${pred.created_at ? new Date(pred.created_at).toLocaleString() : "n/a"}`],
+            ["Source: ML API"],
           ]),
         );
 
@@ -142,7 +105,7 @@ export default function LandslideMap({ className = "" }: { className?: string })
       });
 
       const legend = (L.control as any)({ position: "bottomright" });
-      legend.onAdd = (map: any) => {
+      legend.onAdd = () => {
         const div = L.DomUtil.create("div", "leaflet-control-legend");
         div.style.background = "rgba(15, 23, 42, 0.9)";
         div.style.padding = "10px";
@@ -158,7 +121,7 @@ export default function LandslideMap({ className = "" }: { className?: string })
             </div>
           `).join("")}
           <div style="margin-top: 6px; font-size: 10px; color: #94a3b8;">
-            ${apiAvailable ? "● Live ML model" : "○ Heuristic fallback"}
+            ${predictions.length ? "ML API records" : "No live records"}
           </div>
         `;
         return div;
@@ -170,7 +133,7 @@ export default function LandslideMap({ className = "" }: { className?: string })
     return () => {
       cancelled = true;
     };
-  }, [predictions, apiAvailable]);
+  }, [predictions]);
 
   return (
     <div className={`rounded-xl overflow-hidden border border-border ${className}`}>
@@ -180,8 +143,8 @@ export default function LandslideMap({ className = "" }: { className?: string })
           {isLoading && (
             <span className="text-xs text-muted-foreground">Loading predictions...</span>
           )}
-          <span className={`text-xs px-2 py-0.5 rounded ${apiAvailable ? "bg-emerald-500/20 text-emerald-400" : "bg-amber-500/20 text-amber-400"}`}>
-            {apiAvailable ? "ML Model" : "Fallback"}
+          <span className={`text-xs px-2 py-0.5 rounded ${predictions.length ? "bg-emerald-500/20 text-emerald-400" : "bg-muted text-muted-foreground"}`}>
+            {predictions.length ? "ML Records" : "No Live Data"}
           </span>
         </div>
       </div>

@@ -16,7 +16,9 @@
     "test:all": "npm run test && npm run e2e",
     "playwright:install": "npx playwright install --with-deps",
     "ingest:rainfall": "node scripts/ingest-rainfall.mjs",
-    "ingest:satellite": "node scripts/ingest-satellite.mjs"
+    "ingest:satellite": "node scripts/ingest-satellite.mjs",
+    "ingest:river-levels": "node scripts/ingest-river-levels.mjs",
+    "ingest:flood-predictions": "python scripts/generate-flood-predictions.py"
   },
   "dependencies": {
     "@radix-ui/react-accordion": "^1.2.12",

@@ -36,11 +36,11 @@ export default function PageErrorBoundary({ children, pageName }: PageErrorBound
                 Retry
               </button>
               <Link
-                to="/dashboard"
+                to="/"
                 className="inline-flex items-center gap-2 rounded-xl border border-border px-5 py-2.5 text-sm font-medium text-foreground hover:bg-secondary transition-all"
               >
                 <Home className="h-4 w-4" />
-                Dashboard
+                Home
               </Link>
             </div>
             <p className="text-xs text-muted-foreground">

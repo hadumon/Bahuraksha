@@ -185,46 +185,37 @@ export async function fetchCitizenReports() {
 }
 
 export async function fetchRiverLevelHistory(stationName = "Teku Station") {
-  const rainfall = await fetchRainfallForecasts("Bagmati Basin");
-  
-  if (!rainfall || rainfall.length === 0) {
+  const { data: station, error: stationError } = await supabase
+    .from("river_stations")
+    .select("id")
+    .eq("name", stationName)
+    .maybeSingle();
+
+  if (stationError || !station) {
     return [] as LiveRiverLevelPoint[];
   }
 
-  const baseLevel = 2.5;
-  const dangerLevel = 5.5;
-  const warningLevel = 4.8;
-  const points: LiveRiverLevelPoint[] = [];
-  const now = new Date();
-  
-  const recentRainfall = rainfall[0]?.rainfall || 0;
-  const upcomingRainfall = rainfall[1]?.rainfall || 0;
+  const { data, error } = await supabase
+    .from("river_level_observations")
+    .select("*")
+    .eq("station_id", station.id)
+    .order("observed_at", { ascending: true })
+    .limit(48);
 
-  for (let i = -24; i <= 24; i += 2) {
-    const time = new Date(now.getTime() + i * 60 * 60 * 1000);
-    const timeOffset = (i + 24) / 48;
-    
-    const rainFactor = i < 0 ? recentRainfall : (recentRainfall + (upcomingRainfall * timeOffset));
-    const dischargeBoost = rainFactor > 0 ? (Math.pow(rainFactor, 0.8) / 10) : 0;
-    const noise = Math.sin(i * Math.PI / 12) * 0.1;
-    const computedLevel = baseLevel + dischargeBoost + noise;
-    
-    const isPast = i <= 0;
-    
-    points.push({
-      time: time.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
-      actual: isPast ? computedLevel : null,
-      predicted: isPast ? null : computedLevel + (Math.random() * 0.2 - 0.1),
-      dangerLevel,
-      warningLevel,
-    });
+  if (error || !data?.length) {
+    return [] as LiveRiverLevelPoint[];
   }
 
-  if (points.length > 12 && points[12].actual !== null) {
-    points[12].predicted = points[12].actual;
-  }
-
-  return points;
+  return data.map((row) => ({
+    time: new Date(row.observed_at).toLocaleTimeString([], {
+      hour: "2-digit",
+      minute: "2-digit",
+    }),
+    actual: row.actual_level,
+    predicted: row.predicted_level,
+    dangerLevel: row.danger_level,
+    warningLevel: row.warning_level,
+  }));
 }
 
 export async function fetchRainfallForecasts(basin = "Bagmati Basin") {

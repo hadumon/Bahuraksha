@@ -6,12 +6,13 @@ import type {
 } from "@/lib/operationalData";
 import type { PredictionResponse } from "@/lib/bahuraksha-api";
 import type { HecRasStationResult } from "@/lib/hecrasModel";
+import { riskLevelFromScore } from "@/lib/riskThresholds";
 
 export type RainfallRiskLevel = "light" | "moderate" | "heavy" | "extreme";
 
 export type RainfallForecastPoint = LiveRainfallForecast & {
   intensity: RainfallRiskLevel;
-  source: "database" | "local-model";
+  source: "database";
 };
 
 export type RainfallSummary = {
@@ -21,7 +22,7 @@ export type RainfallSummary = {
   peakDay: string;
   intensity: RainfallRiskLevel;
   riskScore: number;
-  source: "database" | "local-model";
+  source: "database" | "unavailable";
 };
 
 export type CompositeRiskZone = LiveRiskZone & {
@@ -41,8 +42,6 @@ export type CompositeRiskZone = LiveRiskZone & {
   explanation: string[];
 };
 
-const KATHMANDU_MONSOON_NORMAL_MM = [4, 5, 8, 18, 64, 236, 363, 331, 200, 51, 8, 3];
-
 export function classifyRainfallIntensity(mm: number): RainfallRiskLevel {
   if (mm >= 100) return "extreme";
   if (mm >= 50) return "heavy";
@@ -61,35 +60,7 @@ export function rainfallIntensityToRiskScore(intensity: RainfallRiskLevel, proba
   return clamp01(base * (0.55 + 0.45 * probability));
 }
 
-export function generateLocalRainfallForecast(date = new Date()): RainfallForecastPoint[] {
-  const month = date.getMonth();
-  const monthlyNormal = KATHMANDU_MONSOON_NORMAL_MM[month] ?? 25;
-  const dailyNormal = monthlyNormal / 30;
-
-  return Array.from({ length: 7 }, (_, i) => {
-    const forecastDate = new Date(date);
-    forecastDate.setDate(date.getDate() + i);
-
-    const seasonalWave = 0.85 + 0.35 * Math.sin((forecastDate.getDate() + month * 3) / 4);
-    const eventPulse = i >= 2 && i <= 4 ? 1.55 : 1;
-    const rainfall = Math.max(0, dailyNormal * seasonalWave * eventPulse);
-    const probability = clamp01(0.45 + rainfall / 120);
-    const intensity = classifyRainfallIntensity(rainfall);
-
-    return {
-      day: forecastDate.toLocaleDateString([], { weekday: "short" }),
-      rainfall: Number(rainfall.toFixed(1)),
-      probability: Number(probability.toFixed(2)),
-      forecastDate: forecastDate.toISOString().slice(0, 10),
-      intensity,
-      source: "local-model",
-    };
-  });
-}
-
 export function normalizeRainfallForecasts(data: LiveRainfallForecast[]): RainfallForecastPoint[] {
-  if (!data.length) return generateLocalRainfallForecast();
-
   return data.map((point) => ({
     ...point,
     intensity: classifyRainfallIntensity(point.rainfall),
@@ -98,7 +69,19 @@ export function normalizeRainfallForecasts(data: LiveRainfallForecast[]): Rainfa
 }
 
 export function summarizeRainfall(points: RainfallForecastPoint[]): RainfallSummary {
-  const forecasts = points.length ? points : generateLocalRainfallForecast();
+  if (!points.length) {
+    return {
+      total7DayMm: 0,
+      maxDailyMm: 0,
+      maxProbability: 0,
+      peakDay: "Unavailable",
+      intensity: "light",
+      riskScore: 0,
+      source: "unavailable",
+    };
+  }
+
+  const forecasts = points;
   const peak = forecasts.reduce((max, item) => (item.rainfall > max.rainfall ? item : max));
   const total7DayMm = forecasts.reduce((sum, item) => sum + item.rainfall, 0);
   const maxProbability = Math.max(...forecasts.map((item) => item.probability));
@@ -111,15 +94,8 @@ export function summarizeRainfall(points: RainfallForecastPoint[]): RainfallSumm
     peakDay: peak.day,
     intensity,
     riskScore: rainfallIntensityToRiskScore(intensity, maxProbability),
-    source: forecasts.some((item) => item.source === "database") ? "database" : "local-model",
+    source: "database",
   };
-}
-
-export function riskLevelFromScore(score: number): RiskLevel {
-  if (score >= 0.78) return "evacuate";
-  if (score >= 0.58) return "warning";
-  if (score >= 0.32) return "watch";
-  return "safe";
 }
 
 export function computeCompositeRiskZones(params: {

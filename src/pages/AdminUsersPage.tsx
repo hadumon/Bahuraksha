@@ -51,7 +51,8 @@ export default function AdminUsersPage() {
         return;
       }
       setProfiles(data ?? []);
-    } catch (e: any) {
+    } catch (e) {
+      console.error("Failed to load users:", e);
       toast.error("Failed to load users");
     } finally {
       setLoading(false);
@@ -73,7 +74,8 @@ export default function AdminUsersPage() {
       setProfiles((prev) =>
         prev.map((p) => (p.id === profileId ? { ...p, role: newRole } : p)),
       );
-    } catch (e: any) {
+    } catch (e) {
+      console.error("Failed to update role:", e);
       toast.error("Failed to update role");
     } finally {
       setUpdatingId(null);

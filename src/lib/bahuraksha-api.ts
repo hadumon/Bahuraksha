@@ -1,5 +1,7 @@
 // bahuraksha-api.ts
 
+import { reportBackendHealth } from "./apiHealth";
+
 export interface Prediction {
   class: 0 | 1 | 2;
   label: "dry_land" | "flood_water";
@@ -37,85 +39,46 @@ export interface HealthResponse {
 
 // ── Config ────────────────────────────────────────────────────────────────────
 
-const API_BASE = "https://bahuraksha.onrender.com";
-
-// Human-readable labels for UI display
-export const LABEL_TEXT: Record<Prediction["label"], string> = {
-  dry_land: "Dry Land",
-  flood_water: "Flood / Water Detected",
-};
-
-export const LABEL_ICON: Record<Prediction["label"], string> = {
-  dry_land: "🟡",
-  flood_water: "🔵",
-};
-
-export const RISK_LEVEL = (score: number): "LOW" | "MODERATE" | "HIGH" | "CRITICAL" => {
-  if (score < 25) return "LOW";
-  if (score < 50) return "MODERATE";
-  if (score < 75) return "HIGH";
-  return "CRITICAL";
-};
-
-export const RISK_COLOR: Record<ReturnType<typeof RISK_LEVEL>, string> = {
-  LOW: "#22c55e",
-  MODERATE: "#f59e0b",
-  HIGH: "#ef4444",
-  CRITICAL: "#7f1d1d",
-};
+const API_BASE = import.meta.env.VITE_BAHURAKSHA_API_URL ?? "https://bahuraksha.onrender.com";
 
 // ── API Client ────────────────────────────────────────────────────────────────
 
 async function apiFetch<T>(path: string, options?: RequestInit): Promise<T> {
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), 30000);
-  const res = await fetch(`${API_BASE}${path}`, {
-    headers: { "Content-Type": "application/json" },
-    signal: controller.signal,
-    ...options,
-  });
-  clearTimeout(timeout);
+  try {
+    const res = await fetch(`${API_BASE}${path}`, {
+      headers: { "Content-Type": "application/json" },
+      signal: controller.signal,
+      ...options,
+    });
+    clearTimeout(timeout);
 
-  if (!res.ok) {
-    const err = await res.json().catch(() => ({ detail: res.statusText }));
-    throw new Error(err.detail ?? `API error ${res.status}`);
+    if (!res.ok) {
+      reportBackendHealth("bahuraksha", false);
+      const err = await res.json().catch(() => ({ detail: res.statusText }));
+      throw new Error(err.detail ?? `API error ${res.status}`);
+    }
+
+    reportBackendHealth("bahuraksha", true);
+    return res.json() as Promise<T>;
+  } catch (e) {
+    clearTimeout(timeout);
+    reportBackendHealth("bahuraksha", false);
+    throw e;
   }
-
-  return res.json() as Promise<T>;
 }
 
 /**
  * Get today's flood/glacier prediction for Bahuraksha AOI.
- * Uses POST /predict (fast) instead of GET /latest (STAC, slow).
- * Falls back to heuristic on failure.
+ * Uses the backend's latest CSV/model-backed prediction endpoint.
  */
 export async function getLatest(): Promise<PredictionResponse> {
-  const today = new Date().toISOString().slice(0, 10);
-  const bbox = [85.0, 27.5, 85.5, 28.0];
-  return apiFetch<PredictionResponse>("/predict", {
-    method: "POST",
-    body: JSON.stringify({ date: today, bbox, lookback_days: 60, cloud_max: 80 }),
-  });
+  return apiFetch<PredictionResponse>("/latest");
 }
 
 export async function getHistory(days: number = 7): Promise<HistoryResponse> {
-  try {
-    return await apiFetch<HistoryResponse>(`/history?days=${days}`);
-  } catch {
-    const today = new Date();
-    const entries = Array.from({ length: days }, (_, i) => {
-      const d = new Date(today);
-      d.setDate(d.getDate() - (days - 1 - i));
-      const scoreBase = 25 + Math.random() * 50;
-      return {
-        date: d.toISOString().slice(0, 10),
-        label: scoreBase > 60 ? "flood_water" as const : "dry_land" as const,
-        risk_score: Math.round(scoreBase * 10) / 10,
-        confidence: 0.5 + Math.random() * 0.4,
-      };
-    });
-    return { history: entries };
-  }
+  return apiFetch<HistoryResponse>(`/history?days=${days}`);
 }
 
 /**

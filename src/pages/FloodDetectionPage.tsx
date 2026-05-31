@@ -19,33 +19,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { getLatest, getHistory } from "@/lib/bahuraksha-api";
 import { fetchRainfallForecasts } from "@/lib/operationalData";
 import { normalizeRainfallForecasts, summarizeRainfall } from "@/lib/riskEngine";
-
-function computeFallbackPrediction() {
-  const scoreBase = 25 + Math.random() * 50;
-  return {
-    risk_score: Math.round(scoreBase * 10) / 10,
-    confidence: 0.5 + Math.random() * 0.4,
-    label: scoreBase > 60 ? "flood_water" as const : "dry_land" as const,
-    class: scoreBase > 60 ? 1 as const : 0 as const,
-    color: scoreBase > 60 ? "#3b82f6" : "#c8a96e",
-  };
-}
-
-function generateFallbackHistory() {
-  const today = new Date();
-  const scoreBase = 25 + Math.random() * 50;
-  return Array.from({ length: 7 }, (_, i) => {
-    const d = new Date(today);
-    d.setDate(d.getDate() - (6 - i));
-    const variation = Math.sin(i * 1.2) * 15;
-    return {
-      date: d.toISOString().slice(0, 10),
-      label: (scoreBase + variation > 60 ? "flood_water" : "dry_land") as "dry_land" | "flood_water",
-      risk_score: Math.round((scoreBase + variation) * 10) / 10,
-      confidence: 0.5 + Math.random() * 0.4,
-    };
-  });
-}
+import { logger } from "@/lib/logger";
 
 export default function FloodDetectionPage() {
   const { data: history, isLoading: isHistoryLoading } = useQuery({
@@ -75,10 +49,8 @@ export default function FloodDetectionPage() {
     ? rainfallForecasts.length * 24
     : null;
 
-  const failed = !!predictionError && !isPredictionLoading;
-  const fallback = failed ? computeFallbackPrediction() : null;
-  const latest = failed ? fallback : prediction?.prediction ?? null;
-  const historyData = history?.history ?? (failed ? generateFallbackHistory() : []);
+  const latest = prediction?.prediction ?? null;
+  const historyData = history?.history ?? [];
 
   const riskScore = latest?.risk_score ?? null;
   const confidence = latest?.confidence ?? null;
@@ -104,9 +76,7 @@ export default function FloodDetectionPage() {
         status: "pending",
       }).then(({ error }) => {
         if (error) {
-          console.warn("Flood alert insert:", error.message);
-        } else {
-          console.info("Pending flood alert created");
+          logger.warn("Flood alert insert failed", { error: error.message });
         }
       });
     }
@@ -156,7 +126,7 @@ export default function FloodDetectionPage() {
                   : "N/A"}
             </p>
               <p className="text-xs text-muted-foreground mt-1">
-                {isPredictionLoading ? "Fetching..." : failed ? "Heuristic estimate (API offline)" : "Latest satellite pass"}
+                {isPredictionLoading ? "Fetching..." : predictionError ? "Prediction unavailable" : "Latest satellite pass"}
               </p>
           </div>
           <div className="gradient-card border border-border p-5 rounded-xl">

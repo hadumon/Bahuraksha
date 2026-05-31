@@ -25,10 +25,11 @@ export default function LoginPage() {
 
   // Redirect if already logged in
   useEffect(() => {
+    if (authLoading) return;
     if (user) {
       navigate("/dashboard", { replace: true });
     }
-  }, [user, navigate]);
+  }, [user, navigate, authLoading]);
 
   const validateForm = () => {
     if (!email.trim()) {

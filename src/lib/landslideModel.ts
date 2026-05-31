@@ -1,4 +1,5 @@
 import type { RiskLevel } from "@/lib/operationalData";
+import { riskLevelFromScore } from "@/lib/riskThresholds";
 
 export type { RiskLevel };
 
@@ -144,7 +145,7 @@ export function computeHeuristicPrediction(input: LandslideInput): LandslidePred
   ].sort((a, b) => b.weight - a.weight);
 
   const susceptibilityScore = probability;
-  const riskLevel: RiskLevel = probability >= 0.78 ? "evacuate" : probability >= 0.58 ? "warning" : probability >= 0.32 ? "watch" : "safe";
+  const riskLevel: RiskLevel = riskLevelFromScore(probability);
   const confidence = 0.6 + Math.random() * 0.25;
 
   return {
@@ -156,15 +157,6 @@ export function computeHeuristicPrediction(input: LandslideInput): LandslidePred
     confidence,
     timeHorizonHours: 72,
   };
-}
-
-export function computeBatchHeuristic(inputs: LandslideZoneInput[]): (LandslidePrediction & { id: string; name: string; district: string })[] {
-  return inputs.map((input) => ({
-    ...computeHeuristicPrediction(input),
-    id: input.id,
-    name: input.name,
-    district: input.district,
-  }));
 }
 
 export async function checkApiHealth(): Promise<boolean> {

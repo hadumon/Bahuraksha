@@ -28,7 +28,9 @@ import ModelStatusPanel from "@/components/dashboard/ModelStatusPanel";
 import RiskExplanationPanel from "@/components/dashboard/RiskExplanationPanel";
 import { computeCompositeRiskZones, normalizeRainfallForecasts } from "@/lib/riskEngine";
 import { getLatest, getHistory } from "@/lib/bahuraksha-api";
+import type { LandslideZoneInput } from "@/lib/landslideModel";
 import { predictBatchLandslideRisk, checkApiHealth } from "@/lib/landslideModel";
+import type { LiveRiskZone } from "@/lib/operationalData";
 import {
   LineChart,
   Line,
@@ -76,12 +78,25 @@ const itemVariants: Variants = {
   },
 };
 
-const LANDSLIDE_ZONES = [
-  { id: "dash-1", name: "Sindhupalchok", district: "Sindhupalchok", coordinates: [27.78, 85.85] as [number, number], slopeAngleDeg: 42, soilMoisturePct: 88, rainfall7DayMm: 320, rainfallTodayMm: 65, seismicActivityMg: 0.015, vegetationCoverPct: 25, elevationM: 1800, distanceToRoadKm: 0.3 },
-  { id: "dash-2", name: "Rasuwa", district: "Rasuwa", coordinates: [28.15, 85.35] as [number, number], slopeAngleDeg: 38, soilMoisturePct: 75, rainfall7DayMm: 210, rainfallTodayMm: 35, seismicActivityMg: 0.008, vegetationCoverPct: 45, elevationM: 2200, distanceToRoadKm: 0.8 },
-  { id: "dash-3", name: "Dolakha", district: "Dolakha", coordinates: [27.67, 86.18] as [number, number], slopeAngleDeg: 28, soilMoisturePct: 55, rainfall7DayMm: 120, rainfallTodayMm: 15, seismicActivityMg: 0.003, vegetationCoverPct: 65, elevationM: 1400, distanceToRoadKm: 2.5 },
-  { id: "dash-4", name: "Gorkha", district: "Gorkha", coordinates: [28.00, 84.63] as [number, number], slopeAngleDeg: 35, soilMoisturePct: 70, rainfall7DayMm: 180, rainfallTodayMm: 25, seismicActivityMg: 0.005, vegetationCoverPct: 50, elevationM: 1600, distanceToRoadKm: 1.2 },
-];
+function zonesToLandslideInput(
+  zones: LiveRiskZone[],
+): LandslideZoneInput[] {
+  if (!zones.length) return [];
+  return zones.map((z, i) => ({
+    id: z.id ?? `zone-${i}`,
+    name: z.name,
+    district: z.district,
+    coordinates: z.coordinates,
+    slopeAngleDeg: z.name.includes("Kirtipur") || z.name.includes("Budhanilkantha") ? 22 : 10,
+    soilMoisturePct: 50,
+    rainfall7DayMm: 35,
+    rainfallTodayMm: 8,
+    seismicActivityMg: 0.008,
+    vegetationCoverPct: z.name.includes("Budhanilkantha") ? 45 : 20,
+    elevationM: z.name.includes("Budhanilkantha") ? 1600 : z.name.includes("Kirtipur") ? 1450 : 1350,
+    distanceToRoadKm: 0.5,
+  }));
+}
 
 export default function Index() {
   const queryClient = useQueryClient();
@@ -134,6 +149,8 @@ export default function Index() {
     xgboostPrediction: prediction,
   });
 
+  const landslideZoneInputs = useMemo(() => zonesToLandslideInput(zones), [zones]);
+
   const { data: landslideApiAvailable = false } = useQuery({
     queryKey: ["landslide-api-health-dashboard"],
     queryFn: checkApiHealth,
@@ -142,8 +159,11 @@ export default function Index() {
   });
 
   const { data: landslidePredictions = [] } = useQuery({
-    queryKey: ["landslide-predictions-dashboard", landslideApiAvailable],
-    queryFn: () => predictBatchLandslideRisk(LANDSLIDE_ZONES),
+    queryKey: ["landslide-predictions-dashboard", landslideApiAvailable, zones.length],
+    queryFn: () =>
+      landslideZoneInputs.length
+        ? predictBatchLandslideRisk(landslideZoneInputs)
+        : Promise.resolve([]),
     staleTime: 1000 * 60 * 10,
   });
 

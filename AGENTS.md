@@ -21,8 +21,10 @@ npm run test:watch           # Vitest watch
 npm run e2e                  # Playwright E2E
 npm run test:all             # Unit + E2E
 npm run playwright:install   # Playwright browsers
-npm run ingest:satellite     # STAC ingestion (needs SUPABASE_URL + SUPABASE_SERVICE_KEY)
-npm run ingest:rainfall      # Rainfall CSV ingestion
+npm run ingest:satellite     # Sentinel STAC ingestion (needs SUPABASE_URL + SUPABASE_SERVICE_KEY)
+npm run ingest:rainfall      # Open-Meteo rainfall forecast ingestion
+npm run ingest:river-levels  # Open-Meteo Flood API river discharge → level ingestion
+npm run ingest:flood-predictions  # bahuraksha.onrender.com → flood_predictions table
 start-demo.bat               # Start API (:8000) + frontend (:8080)
 demo-check.bat               # Health check: API, frontend, models, CSVs, predictions
 
@@ -39,10 +41,13 @@ python -m pytest test_main.py test_integration.py test_training.py test_landslid
 # ML pipeline (ml-pipeline)
 cd ml-pipeline
 python train.py
-python train.py --data-path data/landslide_inventory.csv  # real data
+python train.py --data-path data/landslide_inventory_enriched.csv --no-synthetic  # real ICIMOD data
 python evaluate.py
 python api_server.py
 pytest tests/ -v
+
+# Generate & persist predictions to Supabase (needs SUPABASE_URL + SUPABASE_SERVICE_KEY)
+python ../scripts/generate-landslide-predictions.py
 ```
 
 ## Architecture
@@ -131,7 +136,7 @@ UPDATE public.profiles SET role = 'admin' WHERE email = 'your-admin@email.com';
 - Client: `src/integrations/supabase/client.ts`
 - Types: `src/integrations/supabase/types.ts` (auto-generated; `profiles` type manually added)
 - Migrations: `supabase/migrations/` (10 migrations)
-- Tables: `risk_zones`, `river_stations`, `river_level_observations`, `rainfall_forecasts`, `data_sources`, `satellite_products`, `profiles`, `sentinel_scenes`, `landslide_predictions`
+- Tables: `risk_zones`, `river_stations`, `river_level_observations`, `rainfall_forecasts`, `data_sources`, `satellite_products`, `profiles`, `sentinel_scenes`, `landslide_predictions`, `flood_predictions`
 
 ## Docker & Deploy
 

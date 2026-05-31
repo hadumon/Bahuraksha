@@ -1,4 +1,5 @@
 import type { RiskLevel } from "@/lib/operationalData";
+import { fetchRainfallForecasts } from "./operationalData";
 
 export type HecRasStationResult = {
   stationId: string;
@@ -26,17 +27,6 @@ export type HecRasCrossSection = {
   channelN: number;
   rightOverbankN: number;
   notes: string;
-};
-
-export const syntheticRoutingMetadata = {
-  river: "Bagmati River",
-  reach: "Sundarijal/Gokarna to Chovar outlet",
-  modelType: "Synthetic Hydrological Routing (Manning's)",
-  status: "Live: Calibrated to recent rainfall",
-  verticalDatum: "Local project datum",
-  lastUpdated: new Date().toISOString(),
-  disclaimer:
-    "Powered by real-time Open-Meteo precipitation forecasts routed through physical channel geometry.",
 };
 
 export const hecRasCrossSections: HecRasCrossSection[] = [
@@ -91,8 +81,6 @@ export const hecRasCrossSections: HecRasCrossSection[] = [
     notes: "Downstream control/outlet, replace normal-depth BC with rating curve if available.",
   },
 ];
-
-import { fetchRainfallForecasts } from "./operationalData";
 
 export async function fetchSyntheticRoutingResults(): Promise<HecRasStationResult[]> {
   const rainfall = await fetchRainfallForecasts("Bagmati Basin");
@@ -158,26 +146,4 @@ export async function fetchSyntheticRoutingResults(): Promise<HecRasStationResul
   return results;
 }
 
-export function getRoutingSummary(results: HecRasStationResult[]) {
-  if (!results.length) return null;
-  
-  const peak = results.reduce((peak, item) =>
-    item.waterSurfaceM / item.dangerLevelM > peak.waterSurfaceM / peak.dangerLevelM ? item : peak,
-  );
-  const evacuationCount = results.filter(
-    (result) => result.riskLevel === "evacuate",
-  ).length;
-  const warningCount = results.filter(
-    (result) => result.riskLevel === "warning",
-  ).length;
 
-  return {
-    peak,
-    evacuationCount,
-    warningCount,
-    stationCount: results.length,
-    maxArrivalTimeHours: Math.max(
-      ...results.map((result) => result.arrivalTimeHours),
-    ),
-  };
-}
