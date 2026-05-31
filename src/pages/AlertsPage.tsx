@@ -6,7 +6,7 @@ import RiskLevelBadge from "@/components/dashboard/RiskLevelBadge";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { sendWhatsAppAlert } from "@/lib/bahuraksha-api";
-import { Droplets, Mountain, Bell, BellOff, Inbox } from "lucide-react";
+import { Droplets, Mountain, Bell, BellOff, Inbox, CheckCircle2, XCircle } from "lucide-react";
 
 const typeIcons = { flood: Droplets, landslide: Mountain };
 const typeLabels = { flood: "Flood", landslide: "Landslide" };
@@ -19,6 +19,7 @@ type AlertRow = {
   message: string;
   zone: string;
   created_at?: string;
+  status: "pending" | "approved" | "dismissed";
   is_active: boolean;
 };
 
@@ -74,7 +75,12 @@ export default function AlertsPage() {
   }, [queryClient]);
 
   const activeCount = useMemo(
-    () => alerts.filter((a) => a.is_active).length,
+    () => alerts.filter((a) => a.status === "approved").length,
+    [alerts],
+  );
+
+  const pendingCount = useMemo(
+    () => alerts.filter((a) => a.status === "pending").length,
     [alerts],
   );
 
@@ -88,6 +94,7 @@ export default function AlertsPage() {
       type: formState.type,
       severity: formState.severity,
       is_active: true,
+      status: "approved" as const,
       id: crypto.randomUUID(),
     };
 
@@ -136,9 +143,17 @@ export default function AlertsPage() {
               All system alerts — SMS, push notifications, dashboard
             </p>
           </div>
-          <div className="flex items-center gap-2 text-sm text-muted-foreground">
-            <Bell className="w-4 h-4" />
-            <span>{activeCount} active</span>
+          <div className="flex items-center gap-3 text-sm text-muted-foreground">
+            <span className="flex items-center gap-1">
+              <Bell className="w-4 h-4" />
+              {activeCount} active
+            </span>
+            {pendingCount > 0 && (
+              <span className="flex items-center gap-1 text-amber-600">
+                <BellOff className="w-4 h-4" />
+                {pendingCount} pending
+              </span>
+            )}
           </div>
         </div>
 
@@ -257,11 +272,14 @@ export default function AlertsPage() {
           ) : (
           alerts.map((alert) => {
             const Icon = typeIcons[alert.type];
+            const isPending = alert.status === "pending";
+            const isApproved = alert.status === "approved";
+            const isDismissed = alert.status === "dismissed";
             return (
               <div
                 key={alert.id}
                 className={`gradient-card rounded-xl border p-5 transition-all ${
-                  alert.is_active
+                  isApproved
                     ? "border-border"
                     : "border-border/50 opacity-60"
                 }`}
@@ -296,13 +314,19 @@ export default function AlertsPage() {
                       <span className="text-xs font-mono text-muted-foreground bg-secondary px-2 py-0.5 rounded">
                         {typeLabels[alert.type]}
                       </span>
-                      {!alert.is_active ? (
+                      {isPending && (
                         <span className="flex items-center gap-1 text-xs text-amber-600 bg-amber-50 dark:bg-amber-950/30 px-2 py-0.5 rounded">
                           <BellOff className="w-3 h-3" /> Pending
                         </span>
-                      ) : (
+                      )}
+                      {isApproved && (
                         <span className="flex items-center gap-1 text-xs text-green-600 bg-green-50 dark:bg-green-950/30 px-2 py-0.5 rounded">
                           <Bell className="w-3 h-3" /> Approved
+                        </span>
+                      )}
+                      {isDismissed && (
+                        <span className="flex items-center gap-1 text-xs text-muted-foreground bg-secondary px-2 py-0.5 rounded">
+                          <XCircle className="w-3 h-3" /> Dismissed
                         </span>
                       )}
                     </div>
@@ -319,31 +343,48 @@ export default function AlertsPage() {
                       </span>
                     </div>
                     <div className="flex items-center gap-2 mt-3">
-                      {!alert.is_active ? (
+                      {isPending && (
                         <button
                           onClick={() => {
                             supabase
                               .from("alerts")
-                              .update({ is_active: true })
+                              .update({ is_active: true, status: "approved" })
                               .eq("id", alert.id)
-                              .then(({ error }) => {
-                                if (error) toast.error("Failed to approve", { description: error.message });
-                                else {
+                              .then(async ({ error }) => {
+                                if (error) {
+                                  toast.error("Failed to approve", { description: error.message });
+                                } else {
                                   toast.success("Alert approved");
                                   queryClient.invalidateQueries({ queryKey: ["alerts"] });
+                                  const wa = await sendWhatsAppAlert({
+                                    zone: alert.zone,
+                                    title: alert.title,
+                                    message: alert.message,
+                                    severity: alert.severity,
+                                  });
+                                  if (wa.status === "sent") {
+                                    toast.success("WhatsApp alert sent", {
+                                      description: `${alert.zone}: ${alert.severity} risk`,
+                                    });
+                                  } else {
+                                    toast.info("WhatsApp not configured", {
+                                      description: wa.note ?? "Alert approved locally",
+                                    });
+                                  }
                                 }
                               });
                           }}
                           className="text-xs bg-primary text-white px-3 py-1.5 rounded-md hover:bg-primary/90"
                         >
-                          Approve
+                          <CheckCircle2 className="w-3 h-3 mr-1 inline" /> Approve
                         </button>
-                      ) : (
+                      )}
+                      {(isPending || isApproved) && (
                         <button
                           onClick={() => {
                             supabase
                               .from("alerts")
-                              .update({ is_active: false })
+                              .update({ is_active: false, status: "dismissed" })
                               .eq("id", alert.id)
                               .then(({ error }) => {
                                 if (error) toast.error("Failed to dismiss", { description: error.message });
@@ -355,7 +396,7 @@ export default function AlertsPage() {
                           }}
                           className="text-xs bg-muted text-muted-foreground px-3 py-1.5 rounded-md hover:bg-border"
                         >
-                          Dismiss
+                          <XCircle className="w-3 h-3 mr-1 inline" /> Dismiss
                         </button>
                       )}
                     </div>

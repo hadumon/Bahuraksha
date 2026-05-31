@@ -15,9 +15,8 @@ import {
 } from "recharts";
 import AppLayout from "@/components/layout/AppLayout";
 import ModelStatusPanel from "@/components/dashboard/ModelStatusPanel";
-import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
-import { getLatest, getHistory, sendWhatsAppAlert } from "@/lib/bahuraksha-api";
+import { getLatest, getHistory } from "@/lib/bahuraksha-api";
 import { fetchRainfallForecasts } from "@/lib/operationalData";
 import { normalizeRainfallForecasts, summarizeRainfall } from "@/lib/riskEngine";
 
@@ -102,28 +101,12 @@ export default function FloodDetectionPage() {
         type: "flood",
         severity,
         is_active: false,
+        status: "pending",
       }).then(({ error }) => {
         if (error) {
           console.warn("Flood alert insert:", error.message);
         } else {
-          console.info("Flood alert created in database");
-        }
-      });
-
-      sendWhatsAppAlert({
-        zone: "Bagmati Basin",
-        title: `Flood ${severity === "evacuate" ? "Evacuation" : "Warning"}: Bagmati Basin`,
-        message: `Satellite model predicts ${severity} risk (score: ${riskScore}/100, confidence: ${Math.round(confidence * 100)}%). ${label === "flood_water" ? "Water detected in satellite imagery." : "Elevated risk conditions detected."}`,
-        severity,
-      }).then((wa) => {
-        if (wa.status === "sent") {
-          toast.success("WhatsApp alert sent", {
-            description: `Bagmati Basin: ${severity} risk`,
-          });
-        } else {
-          toast.info("Alert created", {
-            description: `Bagmati Basin: ${severity} risk (Twilio not configured)`,
-          });
+          console.info("Pending flood alert created");
         }
       });
     }

@@ -4,12 +4,9 @@ import AppLayout from "@/components/layout/AppLayout";
 import { Mountain, AlertTriangle, CloudRain, Activity, MapPin, ChevronRight, Wind, Loader2 } from "lucide-react";
 import { Area, AreaChart, ResponsiveContainer, Tooltip, XAxis, YAxis, CartesianGrid } from "recharts";
 import { motion } from "framer-motion";
-import { toast } from "sonner";
-import { supabase } from "@/integrations/supabase/client";
 import { predictBatchLandslideRisk, checkApiHealth, computeBatchHeuristic, type LandslideZoneInput, type LandslidePrediction } from "@/lib/landslideModel";
 import { fetchRainfallForecasts, type RiskLevel } from "@/lib/operationalData";
 import { persistLandslidePredictions } from "@/lib/landslidePersistence";
-import { sendWhatsAppAlert } from "@/lib/bahuraksha-api";
 
 const sampleZones: LandslideZoneInput[] = [
   {
@@ -149,10 +146,6 @@ export default function LandslidesPage() {
     if (key === prevPredictionsRef.current) return;
     prevPredictionsRef.current = key;
 
-    const highRiskPredictions = predictions.filter(
-      (p) => p.riskLevel === "evacuate" || p.riskLevel === "warning",
-    );
-
     const records = predictions.map((p, i) => ({
       zone_id: p.id,
       zone_name: p.name,
@@ -173,38 +166,8 @@ export default function LandslidesPage() {
         console.warn("Landslide persistence:", result.error);
       } else if (result.inserted > 0) {
         console.info(`Persisted ${result.inserted} landslide predictions`);
-        const zoneNames = highRiskPredictions.map((p) => p.name);
-        supabase
-          .from("alerts")
-          .update({ is_active: false })
-          .eq("type", "landslide")
-          .eq("is_active", true)
-          .in("zone", zoneNames)
-          .then(({ error }) => {
-            if (error) console.warn("Could not flip landslide alerts:", error.message);
-            else console.info("Landslide alerts set to pending (is_active=false)");
-          });
       }
     });
-
-    for (const pred of highRiskPredictions) {
-      sendWhatsAppAlert({
-        zone: pred.name,
-        title: `Landslide ${pred.riskLevel === "evacuate" ? "Evacuation" : "Warning"}: ${pred.name}`,
-        message: `ML model predicts ${pred.riskLevel} risk (${Math.round(pred.probability * 100)}% probability). Primary driver: ${pred.primaryDriver}`,
-        severity: pred.riskLevel,
-      }).then((wa) => {
-        if (wa.status === "sent") {
-          toast.success("WhatsApp alert sent", {
-            description: `${pred.name}: ${pred.riskLevel} risk`,
-          });
-        } else {
-          toast.info("Alert created", {
-            description: `${pred.name}: ${pred.riskLevel} risk (Twilio not configured)`,
-          });
-        }
-      });
-    }
   }, [predictions, zonesWithForecast, apiAvailable]);
 
   useEffect(() => {

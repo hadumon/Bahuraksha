@@ -1,6 +1,35 @@
--- Flood prediction storage table
--- Stores XGBoost satellite model predictions for historical analysis and alerting
+-- Council recommendation: add status column + fix alert trigger to set is_active=false
+-- Run AFTER: supabase/migrations/20260521000000_add_landslide_predictions.sql
 
+-- 1. Add status column to alerts (replaces is_active as the state indicator)
+alter table public.alerts add column if not exists status text not null default 'pending';
+
+-- 2. Migrate existing alerts: is_active=true → approved, is_active=false → dismissed
+update public.alerts set status = 'approved' where is_active = true;
+update public.alerts set status = 'dismissed' where is_active = false and status = 'pending';
+
+-- 3. Fix landslide trigger: now creates alerts with is_active=false + status='pending'
+create or replace function public.check_landslide_alert()
+returns trigger as $$
+begin
+  if new.risk_level in ('warning', 'evacuate') then
+    insert into public.alerts (type, severity, title, message, zone, is_active, status, created_at)
+    values (
+      'landslide',
+      new.risk_level,
+      'Landslide Risk Alert: ' || new.zone_name,
+      'ML model predicts ' || new.risk_level || ' risk with ' || round(new.probability * 100, 1) || '% probability. Primary driver: ' || new.primary_driver,
+      new.zone_name,
+      false,
+      'pending',
+      now()
+    );
+  end if;
+  return new;
+end;
+$$ language plpgsql;
+
+-- 4. Flood prediction storage table
 create table if not exists public.flood_predictions (
   id uuid default gen_random_uuid() primary key,
   zone_id text not null,
@@ -21,30 +50,37 @@ create index if not exists idx_flood_predictions_created on public.flood_predict
 
 alter table public.flood_predictions enable row level security;
 
-create policy "flood_predictions_select_all"
-  on public.flood_predictions
-  for select
-  using (true);
+do $$ begin
+  create policy "flood_predictions_select_all"
+    on public.flood_predictions
+    for select
+    using (true);
+exception when duplicate_object then null;
+end $$;
 
-create policy "flood_predictions_insert_authenticated"
-  on public.flood_predictions
-  for insert
-  to authenticated
-  with check (true);
+do $$ begin
+  create policy "flood_predictions_insert_authenticated"
+    on public.flood_predictions
+    for insert
+    to authenticated
+    with check (true);
+exception when duplicate_object then null;
+end $$;
 
--- Automatic alert trigger for high-risk flood predictions
+-- 5. Flood auto-alert trigger (also sets is_active=false + status='pending')
 create or replace function public.check_flood_alert()
 returns trigger as $$
 begin
   if new.risk_level in ('warning', 'evacuate') then
-    insert into public.alerts (type, severity, title, message, zone, is_active, created_at)
+    insert into public.alerts (type, severity, title, message, zone, is_active, status, created_at)
     values (
       'flood',
       new.risk_level,
       'Flood Risk Alert: ' || new.zone_name,
       'Satellite model predicts ' || new.risk_level || ' risk (score: ' || round(new.risk_score, 1) || '/100) with ' || round(new.confidence * 100, 1) || '% confidence. Source: ' || new.model_source,
       new.zone_name,
-      true,
+      false,
+      'pending',
       now()
     );
   end if;

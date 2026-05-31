@@ -21,6 +21,7 @@ export type Database = {
           is_active: boolean
           message: string
           severity: "safe" | "watch" | "warning" | "evacuate"
+          status: "pending" | "approved" | "dismissed"
           title: string
           type: "flood" | "landslide"
           zone: string
@@ -31,6 +32,7 @@ export type Database = {
           is_active?: boolean
           message: string
           severity: "safe" | "watch" | "warning" | "evacuate"
+          status?: "pending" | "approved" | "dismissed"
           title: string
           type: "flood" | "landslide"
           zone: string
@@ -41,6 +43,7 @@ export type Database = {
           is_active?: boolean
           message?: string
           severity?: "safe" | "watch" | "warning" | "evacuate"
+          status?: "pending" | "approved" | "dismissed"
           title?: string
           type?: "flood" | "landslide"
           zone?: string
