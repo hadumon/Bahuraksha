@@ -4,6 +4,7 @@ import {
   LayoutDashboard,
   Map,
   Activity,
+  Droplets,
   AlertTriangle,
   Users,
   Database,
@@ -26,6 +27,7 @@ interface NavItemDef {
 
 const ALL_NAV_ITEMS: NavItemDef[] = [
   { path: "/dashboard", icon: LayoutDashboard, label: "Dashboard", permission: "view:dashboard" },
+  { path: "/flood-detection", icon: Droplets, label: "Flood Detection", permission: "view:flood-detection" },
   { path: "/risk-map", icon: Map, label: "Risk Map", permission: "view:risk-map" },
   { path: "/monitoring", icon: Activity, label: "River Monitoring", permission: "view:monitoring" },
 

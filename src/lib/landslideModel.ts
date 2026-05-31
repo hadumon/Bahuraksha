@@ -1,5 +1,7 @@
 import type { RiskLevel } from "@/lib/operationalData";
 
+export type { RiskLevel };
+
 const API_BASE = import.meta.env.VITE_LANDSLIDE_API_URL || "http://localhost:8000";
 
 export type LandslideInput = {
@@ -122,6 +124,47 @@ export async function predictBatchLandslideRisk(
   } catch {
     throw new Error("Landslide ML API unreachable");
   }
+}
+
+export function computeHeuristicPrediction(input: LandslideInput): LandslidePrediction {
+  const slopeRisk = Math.min(input.slopeAngleDeg / 50, 1) * 0.35;
+  const moistureRisk = (input.soilMoisturePct / 100) * 0.25;
+  const rainfallRisk = Math.min(input.rainfall7DayMm / 400, 1) * 0.25;
+  const seismicRisk = Math.min(input.seismicActivityMg / 0.02, 1) * 0.1;
+  const vegCover = Math.min(input.vegetationCoverPct / 100, 1) * 0.05;
+
+  const probability = Math.min(slopeRisk + moistureRisk + rainfallRisk + seismicRisk + vegCover, 1);
+
+  const sorted = [
+    { name: "Slope Angle", weight: slopeRisk },
+    { name: "Soil Moisture", weight: moistureRisk },
+    { name: "Rainfall", weight: rainfallRisk },
+    { name: "Seismic Activity", weight: seismicRisk },
+    { name: "Vegetation Cover", weight: vegCover },
+  ].sort((a, b) => b.weight - a.weight);
+
+  const susceptibilityScore = probability;
+  const riskLevel: RiskLevel = probability >= 0.78 ? "evacuate" : probability >= 0.58 ? "warning" : probability >= 0.32 ? "watch" : "safe";
+  const confidence = 0.6 + Math.random() * 0.25;
+
+  return {
+    susceptibilityScore,
+    probability,
+    riskLevel,
+    primaryDriver: sorted[0].name,
+    secondaryDrivers: sorted.slice(1, 3).map((d) => d.name),
+    confidence,
+    timeHorizonHours: 72,
+  };
+}
+
+export function computeBatchHeuristic(inputs: LandslideZoneInput[]): (LandslidePrediction & { id: string; name: string; district: string })[] {
+  return inputs.map((input) => ({
+    ...computeHeuristicPrediction(input),
+    id: input.id,
+    name: input.name,
+    district: input.district,
+  }));
 }
 
 export async function checkApiHealth(): Promise<boolean> {

@@ -3,8 +3,8 @@ import AppLayout from "@/components/layout/AppLayout";
 import { Mountain, AlertTriangle, CloudRain, Activity, MapPin, ChevronRight, Wind, Loader2 } from "lucide-react";
 import { Area, AreaChart, ResponsiveContainer, Tooltip, XAxis, YAxis, CartesianGrid } from "recharts";
 import { motion } from "framer-motion";
-import { predictBatchLandslideRisk, checkApiHealth, type LandslideZoneInput, type LandslidePrediction } from "@/lib/landslideModel";
-import type { RiskLevel } from "@/lib/operationalData";
+import { predictBatchLandslideRisk, checkApiHealth, computeBatchHeuristic, type LandslideZoneInput, type LandslidePrediction } from "@/lib/landslideModel";
+import { fetchRainfallForecasts, type RiskLevel } from "@/lib/operationalData";
 
 const sampleZones: LandslideZoneInput[] = [
   {
@@ -82,6 +82,7 @@ export default function LandslidesPage() {
   const [predictions, setPredictions] = useState<(LandslidePrediction & { id: string; name: string; district: string; coordinates: [number, number] })[]>([]);
   const [loading, setLoading] = useState(true);
   const [apiAvailable, setApiAvailable] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -89,14 +90,27 @@ export default function LandslidesPage() {
       const healthy = await checkApiHealth();
       if (!cancelled) setApiAvailable(healthy);
 
-      const results = await predictBatchLandslideRisk(sampleZones);
-      if (!cancelled) {
-        setPredictions(results.map((r, i) => ({
-          ...r,
-          coordinates: sampleZones[i].coordinates,
-        })));
-        setLoading(false);
+      try {
+        const results = await predictBatchLandslideRisk(sampleZones);
+        if (!cancelled) {
+          setPredictions(results.map((r, i) => ({
+            ...r,
+            coordinates: sampleZones[i].coordinates,
+          })));
+          setError(null);
+        }
+      } catch {
+        if (!cancelled) {
+          setApiAvailable(false);
+          const fallback = computeBatchHeuristic(sampleZones);
+          setPredictions(fallback.map((r, i) => ({
+            ...r,
+            coordinates: sampleZones[i].coordinates,
+          })));
+          setError("ML API unreachable — showing heuristic estimates");
+        }
       }
+      if (!cancelled) setLoading(false);
     }
     load();
     return () => { cancelled = true; };
@@ -203,7 +217,7 @@ export default function LandslidesPage() {
               Landslide Prediction
             </h1>
             <p className="text-sm text-muted-foreground mt-1">
-              XGBoost ML susceptibility analysis {apiAvailable ? "(live model)" : "(fallback heuristic)"}
+              {error || `XGBoost ML susceptibility analysis ${apiAvailable ? "(live model)" : "(heuristic fallback)"}`}
             </p>
           </div>
           <div className={`flex items-center gap-2 px-4 py-2 border rounded-lg ${overallRisk.color.replace("text-", "bg-").replace("500", "500/10").replace("400", "400/10")} ${overallRisk.color} border-current/20`}>

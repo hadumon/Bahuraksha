@@ -26,6 +26,7 @@ const AboutPage = lazy(() => import("./pages/AboutPage"));
 const BlogPage = lazy(() => import("./pages/BlogPage"));
 const DisastersPage = lazy(() => import("./pages/DisastersPage"));
 const LandslidesPage = lazy(() => import("./pages/LandslidesPage"));
+const FloodDetectionPage = lazy(() => import("./pages/FloodDetectionPage"));
 const AdminUsersPage = lazy(() => import("./pages/AdminUsersPage"));
 
 const queryClient = new QueryClient({
@@ -41,6 +42,7 @@ const queryClient = new QueryClient({
 function skeletonVariant(path: string) {
   if (path.startsWith("/admin")) return "list";
   if (path.startsWith("/dashboard")) return "dashboard";
+  if (path.startsWith("/flood-detection")) return "detail";
   if (path.startsWith("/risk-map")) return "map";
   if (path.startsWith("/monitoring")) return "detail";
   if (path.startsWith("/citizen-reports")) return "list";
@@ -129,6 +131,18 @@ function AnimatedRoutes() {
                 <Suspense fallback={<PageSkeleton variant="dashboard" />}>
                   <PageTransition>
                     <Index />
+                  </PageTransition>
+                </Suspense>
+              </PageErrorBoundary>
+            }
+          />
+          <Route
+            path="/flood-detection"
+            element={
+              <PageErrorBoundary pageName="Flood Detection">
+                <Suspense fallback={<PageSkeleton variant="detail" />}>
+                  <PageTransition>
+                    <FloodDetectionPage />
                   </PageTransition>
                 </Suspense>
               </PageErrorBoundary>

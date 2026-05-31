@@ -4,6 +4,7 @@ export type Permission =
   | "view:dashboard"
   | "view:risk-map"
   | "view:monitoring"
+  | "view:flood-detection"
   | "view:alerts"
   | "view:citizen-reports"
   | "view:data-sources"
@@ -17,24 +18,24 @@ export type Permission =
 
 export const ROLE_PERMISSIONS: Record<UserRole, Permission[]> = {
   admin: [
-    "view:dashboard", "view:risk-map", "view:monitoring", "view:alerts",
+    "view:dashboard", "view:risk-map", "view:monitoring", "view:flood-detection", "view:alerts",
     "view:citizen-reports", "view:data-sources", "view:about",
     "view:landslides", "view:admin",
     "manage:alerts", "manage:citizen-reports", "manage:users",
     "submit:field-reports",
   ],
   ops: [
-    "view:dashboard", "view:risk-map", "view:monitoring", "view:alerts",
+    "view:dashboard", "view:risk-map", "view:monitoring", "view:flood-detection", "view:alerts",
     "view:citizen-reports", "view:data-sources", "view:about",
     "view:landslides",
     "manage:alerts", "manage:citizen-reports",
   ],
   analyst: [
-    "view:dashboard", "view:risk-map", "view:monitoring",
+    "view:dashboard", "view:risk-map", "view:monitoring", "view:flood-detection",
     "view:data-sources", "view:about", "view:landslides",
   ],
   field: [
-    "view:dashboard", "view:risk-map", "view:monitoring",
+    "view:dashboard", "view:risk-map", "view:monitoring", "view:flood-detection",
     "view:citizen-reports", "view:about",
     "submit:field-reports",
   ],
@@ -65,6 +66,7 @@ export function routeToPermission(path: string): Permission | null {
     "/dashboard": "view:dashboard",
     "/risk-map": "view:risk-map",
     "/monitoring": "view:monitoring",
+    "/flood-detection": "view:flood-detection",
     "/alerts": "view:alerts",
     "/citizen-reports": "view:citizen-reports",
     "/data-sources": "view:data-sources",
