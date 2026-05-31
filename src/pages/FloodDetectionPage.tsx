@@ -1,8 +1,10 @@
 import { useQuery } from "@tanstack/react-query";
-import { Satellite, Brain, AlertTriangle, Radar, Waves } from "lucide-react";
+import { Satellite, Brain, AlertTriangle, Radar, Waves, CloudRain, Clock } from "lucide-react";
 import {
   LineChart,
   Line,
+  BarChart,
+  Bar,
   XAxis,
   YAxis,
   CartesianGrid,
@@ -13,6 +15,8 @@ import {
 import AppLayout from "@/components/layout/AppLayout";
 import ModelStatusPanel from "@/components/dashboard/ModelStatusPanel";
 import { getLatest, getHistory, RISK_LEVEL } from "@/lib/bahuraksha-api";
+import { fetchRainfallForecasts } from "@/lib/operationalData";
+import { normalizeRainfallForecasts, summarizeRainfall } from "@/lib/riskEngine";
 
 function computeFallbackPrediction() {
   const scoreBase = 25 + Math.random() * 50;
@@ -55,6 +59,20 @@ export default function FloodDetectionPage() {
     retry: 2,
   });
 
+  const { data: rainfallForecasts } = useQuery({
+    queryKey: ["rainfall-forecasts"],
+    queryFn: () => fetchRainfallForecasts("Bagmati Basin"),
+    staleTime: 1000 * 60 * 30,
+  });
+
+  const rainfallSummary = rainfallForecasts?.length
+    ? summarizeRainfall(normalizeRainfallForecasts(rainfallForecasts))
+    : null;
+
+  const leadTimeHours = rainfallForecasts?.length
+    ? rainfallForecasts.length * 24
+    : null;
+
   const failed = !!predictionError && !isPredictionLoading;
   const fallback = failed ? computeFallbackPrediction() : null;
   const latest = failed ? fallback : prediction?.prediction ?? null;
@@ -74,14 +92,22 @@ export default function FloodDetectionPage() {
               Flood Detection
             </h1>
             <p className="text-sm text-muted-foreground mt-1">
-              Sentinel-1/2 XGBoost satellite model — Bagmati Basin
+              Sentinel-1/2 XGBoost satellite model + GFS 7-day rainfall forecast — Bagmati Basin
             </p>
           </div>
-          <div className="flex items-center gap-2 px-4 py-2 border rounded-lg bg-ocean-400/10 text-ocean-400 border-ocean-400/20">
-            <Radar className="w-4 h-4" />
-            <span className="text-sm font-medium">
-              {predictionError ? "Offline" : prediction ? "Live" : "Loading..."}
-            </span>
+          <div className="flex items-center gap-3">
+            {leadTimeHours && (
+              <div className="flex items-center gap-2 px-4 py-2 border rounded-lg bg-emerald-400/10 text-emerald-400 border-emerald-400/20">
+                <Clock className="w-4 h-4" />
+                <span className="text-sm font-medium">{leadTimeHours}h lead time</span>
+              </div>
+            )}
+            <div className="flex items-center gap-2 px-4 py-2 border rounded-lg bg-ocean-400/10 text-ocean-400 border-ocean-400/20">
+              <Radar className="w-4 h-4" />
+              <span className="text-sm font-medium">
+                {predictionError ? "Offline" : prediction ? "Live" : "Loading..."}
+              </span>
+            </div>
           </div>
         </div>
 
@@ -137,7 +163,7 @@ export default function FloodDetectionPage() {
         <div className="gradient-card border border-border rounded-xl p-5 shadow-xl">
           <h3 className="text-lg font-bold text-foreground mb-1">Flood Risk History</h3>
           <p className="text-sm text-muted-foreground mb-6">7-day XGBoost prediction trend</p>
-          <div className="h-[250px] w-full">
+          <div className="h-62.5 w-full">
             <ResponsiveContainer width="100%" height="100%">
               <LineChart
                 data={historyData}
@@ -177,6 +203,44 @@ export default function FloodDetectionPage() {
             <p className="text-xs text-muted-foreground mt-2">Loading history...</p>
           )}
         </div>
+
+        {/* Rainfall Forecast Chart */}
+        {rainfallForecasts && rainfallForecasts.length > 0 && (
+          <div className="gradient-card border border-border rounded-xl p-5 shadow-xl">
+            <div className="flex items-center justify-between mb-1">
+              <h3 className="text-lg font-bold text-foreground">Rainfall Forecast</h3>
+              <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                <CloudRain className="w-3 h-3" />
+                <span>GFS 7-day · {rainfallSummary?.source === "database" ? "Open-Meteo" : "Local model"}</span>
+              </div>
+            </div>
+            <p className="text-sm text-muted-foreground mb-6">
+              Total: {rainfallSummary?.total7DayMm.toFixed(0)}mm · Peak: {rainfallSummary?.maxDailyMm.toFixed(0)}mm on {rainfallSummary?.peakDay} · Lead time: {leadTimeHours}h
+            </p>
+            <div className="h-45 w-full">
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart data={rainfallForecasts} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="#ffffff10" vertical={false} />
+                  <XAxis dataKey="day" stroke="#ffffff50" fontSize={12} tickLine={false} axisLine={false} />
+                  <YAxis yAxisId="left" stroke="#3b82f6" fontSize={12} tickLine={false} axisLine={false} label={{ value: "mm", angle: -90, position: "insideLeft", style: { fill: "#3b82f6", fontSize: 11 } }} />
+                  <YAxis yAxisId="right" orientation="right" stroke="#a855f7" fontSize={12} tickLine={false} axisLine={false} domain={[0, 1]} tickFormatter={(v) => `${(v * 100).toFixed(0)}%`} />
+                  <Tooltip
+                    contentStyle={{ backgroundColor: "#0f172a", borderColor: "#1e293b", borderRadius: "8px" }}
+                    itemStyle={{ color: "#f8fafc" }}
+                    formatter={(value: number, name: string) => {
+                      if (name === "rainfall") return [`${value.toFixed(1)}mm`, "Rainfall"];
+                      if (name === "probability") return [`${(value * 100).toFixed(0)}%`, "Probability"];
+                      return [value, name];
+                    }}
+                  />
+                  <Legend />
+                  <Bar yAxisId="left" dataKey="rainfall" fill="#3b82f6" name="Rainfall" radius={[4, 4, 0, 0]} />
+                  <Bar yAxisId="right" dataKey="probability" fill="#a855f7" name="Probability" radius={[4, 4, 0, 0]} opacity={0.6} />
+                </BarChart>
+              </ResponsiveContainer>
+            </div>
+          </div>
+        )}
 
         {/* Model Status Panel */}
         <ModelStatusPanel />

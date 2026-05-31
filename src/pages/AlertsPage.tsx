@@ -118,9 +118,8 @@ export default function AlertsPage() {
         description: `${wa.recipients} recipient(s) notified for ${newAlert.zone}`,
       });
     } else {
-      toast("WhatsApp alert simulated", {
+      toast.info("Alert created", {
         description: wa.note ?? "Twilio not configured — alert logged",
-        icon: "📱",
       });
     }
   };

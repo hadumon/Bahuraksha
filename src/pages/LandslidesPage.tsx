@@ -1,4 +1,5 @@
 import { useState, useEffect, useMemo } from "react";
+import { useQuery } from "@tanstack/react-query";
 import AppLayout from "@/components/layout/AppLayout";
 import { Mountain, AlertTriangle, CloudRain, Activity, MapPin, ChevronRight, Wind, Loader2 } from "lucide-react";
 import { Area, AreaChart, ResponsiveContainer, Tooltip, XAxis, YAxis, CartesianGrid } from "recharts";
@@ -84,6 +85,25 @@ export default function LandslidesPage() {
   const [apiAvailable, setApiAvailable] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  const { data: rainfallData } = useQuery({
+    queryKey: ["rainfall-forecasts"],
+    queryFn: () => fetchRainfallForecasts("Bagmati Basin"),
+    staleTime: 1000 * 60 * 30,
+  });
+
+  const zonesWithForecast = useMemo(() => {
+    if (!rainfallData?.length) return sampleZones;
+    const totalForecastMm = rainfallData.reduce((s, f) => s + f.rainfall, 0);
+    const todayMm = rainfallData[0]?.rainfall ?? 0;
+    const origTotal = sampleZones.reduce((s, z) => s + z.rainfall7DayMm, 0);
+    const scale = origTotal > 0 ? totalForecastMm / origTotal : 1;
+    return sampleZones.map((z) => ({
+      ...z,
+      rainfall7DayMm: Math.round(z.rainfall7DayMm * scale),
+      rainfallTodayMm: Math.round(z.rainfallTodayMm * (todayMm / (sampleZones.reduce((s, z) => s + z.rainfallTodayMm, 0) / 3))),
+    }));
+  }, [rainfallData]);
+
   useEffect(() => {
     let cancelled = false;
     async function load() {
@@ -91,21 +111,21 @@ export default function LandslidesPage() {
       if (!cancelled) setApiAvailable(healthy);
 
       try {
-        const results = await predictBatchLandslideRisk(sampleZones);
+        const results = await predictBatchLandslideRisk(zonesWithForecast);
         if (!cancelled) {
           setPredictions(results.map((r, i) => ({
             ...r,
-            coordinates: sampleZones[i].coordinates,
+            coordinates: zonesWithForecast[i].coordinates,
           })));
           setError(null);
         }
       } catch {
         if (!cancelled) {
           setApiAvailable(false);
-          const fallback = computeBatchHeuristic(sampleZones);
+          const fallback = computeBatchHeuristic(zonesWithForecast);
           setPredictions(fallback.map((r, i) => ({
             ...r,
-            coordinates: sampleZones[i].coordinates,
+            coordinates: zonesWithForecast[i].coordinates,
           })));
           setError("ML API unreachable — showing heuristic estimates");
         }
@@ -114,14 +134,14 @@ export default function LandslidesPage() {
     }
     load();
     return () => { cancelled = true; };
-  }, []);
+  }, [zonesWithForecast]);
 
   const [activeZone, setActiveZone] = useState<(LandslidePrediction & { id: string; name: string; district: string; coordinates: [number, number]; slopeAngleDeg: number; soilMoisturePct: number; rainfall7DayMm: number; rainfallTodayMm: number; seismicActivityMg: number; vegetationCoverPct: number; elevationM: number; distanceToRoadKm: number }) | null>(null);
 
   useEffect(() => {
     if (predictions.length > 0 && !activeZone) {
       const first = predictions[0];
-      const zone = sampleZones.find((z) => z.id === first.id);
+      const zone = zonesWithForecast.find((z) => z.id === first.id);
       if (zone) {
         setActiveZone({
           ...first,
@@ -137,7 +157,7 @@ export default function LandslidesPage() {
         });
       }
     }
-  }, [predictions, activeZone]);
+  }, [predictions, activeZone, zonesWithForecast]);
 
   const predictionData = useMemo(() => {
     if (!activeZone) return [];
@@ -184,9 +204,9 @@ export default function LandslidesPage() {
 
   const avgSoilMoisture = useMemo(
     () => predictions.length
-      ? Math.round(predictions.reduce((sum, p) => sum + (sampleZones.find((z) => z.id === p.id)?.soilMoisturePct ?? 0), 0) / predictions.length)
+      ? Math.round(predictions.reduce((sum, p) => sum + (zonesWithForecast.find((z) => z.id === p.id)?.soilMoisturePct ?? 0), 0) / predictions.length)
       : 0,
-    [predictions],
+    [predictions, zonesWithForecast],
   );
 
   const highRiskCount = useMemo(
@@ -217,7 +237,7 @@ export default function LandslidesPage() {
               Landslide Prediction
             </h1>
             <p className="text-sm text-muted-foreground mt-1">
-              {error || `XGBoost ML susceptibility analysis ${apiAvailable ? "(live model)" : "(heuristic fallback)"}`}
+              {error || `XGBoost ML susceptibility ${apiAvailable ? "(live model)" : "(heuristic fallback)"} · ${rainfallData?.length ? "GFS 7-day rainfall forecast" : "local rainfall estimates"}`}
             </p>
           </div>
           <div className={`flex items-center gap-2 px-4 py-2 border rounded-lg ${overallRisk.color.replace("text-", "bg-").replace("500", "500/10").replace("400", "400/10")} ${overallRisk.color} border-current/20`}>
@@ -277,7 +297,7 @@ export default function LandslidesPage() {
             <h3 className="text-lg font-bold text-foreground mb-1">Risk vs Soil Saturation</h3>
             <p className="text-sm text-muted-foreground mb-6">7-day forecast for {activeZone?.name ?? "N/A"}</p>
             
-            <div className="h-[200px] sm:h-[250px] md:h-75 w-full">
+            <div className="h-50 sm:h-62.5 md:h-75 w-full">
               <ResponsiveContainer width="100%" height="100%">
                 <AreaChart data={predictionData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
                   <defs>
@@ -314,7 +334,7 @@ export default function LandslidesPage() {
                   whileHover={{ scale: 1.02 }}
                   whileTap={{ scale: 0.98 }}
                   onClick={() => {
-                    const zone = sampleZones.find((z) => z.id === prediction.id);
+                    const zone = zonesWithForecast.find((z) => z.id === prediction.id);
                     if (zone) {
                       setActiveZone({
                         ...prediction,

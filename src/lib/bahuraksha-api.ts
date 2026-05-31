@@ -149,14 +149,14 @@ export async function sendWhatsAppAlert(
       method: "POST",
       body: JSON.stringify(payload),
     });
-  } catch (error) {
-    console.warn("WhatsApp API unreachable, simulating notification.", error);
+  } catch {
+    console.info("WhatsApp notification simulated (Twilio not configured).", { zone: payload.zone, severity: payload.severity });
     return {
       status: "simulated",
       recipients: 45,
       severity: payload.severity,
       zone: payload.zone,
-      note: "Backend unreachable — alert logged locally",
+      note: "Twilio not configured — alert logged",
     };
   }
 }

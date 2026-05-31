@@ -48,7 +48,7 @@ interface Props {
 function BrandLink({ onClick }: { onClick?: () => void }) {
   return (
     <Link to="/dashboard" onClick={onClick} className="flex items-center gap-3 min-w-0 group">
-      <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-ocean-400 to-ocean-600 flex items-center justify-center flex-shrink-0 shadow-glow group-hover:shadow-glow-primary transition-shadow overflow-hidden">
+      <div className="w-9 h-9 rounded-xl bg-linear-to-br from-ocean-400 to-ocean-600 flex items-center justify-center shrink-0 shadow-glow group-hover:shadow-glow-primary transition-shadow overflow-hidden">
         <img
           src="/Bahuraksha%20logo.svg"
           alt="Bahuraksha Logo"
@@ -133,7 +133,7 @@ export default function AppSidebar({ isMobile, mobileOpen, onClose }: Props) {
               animate={{ x: 0 }}
               exit={{ x: -260 }}
               transition={{ duration: 0.3, ease: [0.4, 0, 0.2, 1] }}
-              className="fixed left-0 top-0 h-screen w-[260px] bg-sidebar border-r border-sidebar-border z-50 flex flex-col"
+              className="fixed left-0 top-0 h-screen w-65 bg-sidebar border-r border-sidebar-border z-50 flex flex-col"
             >
               {sidebar}
             </motion.aside>
@@ -144,7 +144,7 @@ export default function AppSidebar({ isMobile, mobileOpen, onClose }: Props) {
   }
 
   return (
-    <aside className="fixed left-0 top-0 h-screen w-[260px] bg-sidebar border-r border-sidebar-border z-50 flex flex-col">
+    <aside className="fixed left-0 top-0 h-screen w-65 bg-sidebar border-r border-sidebar-border z-50 flex flex-col">
       {sidebar}
     </aside>
   );
@@ -191,7 +191,7 @@ function NavList({
             )}
             <item.icon
               className={cn(
-                "w-5 h-5 flex-shrink-0 transition-colors",
+                "w-5 h-5 shrink-0 transition-colors",
                 isActive
                   ? "text-ocean-400"
                   : "text-muted-foreground group-hover:text-sidebar-accent-foreground",
