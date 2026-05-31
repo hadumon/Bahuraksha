@@ -165,6 +165,8 @@ export default function AppSidebar({ isMobile, mobileOpen, onClose }: Props) {
   );
 }
 
+const PUBLIC_PATHS = new Set(["/risk-map", "/monitoring", "/landslides"]);
+
 function NavList({
   location,
   userRole,
@@ -180,7 +182,9 @@ function NavList({
   const visibleItems = skipAuth
     ? ALL_NAV_ITEMS
     : ALL_NAV_ITEMS.filter(
-        (item) => !item.permission || hasPermission(userRole as any, item.permission),
+        (item) =>
+          PUBLIC_PATHS.has(item.path) ||
+          (!item.permission || hasPermission(userRole as any, item.permission)),
       );
 
   return (

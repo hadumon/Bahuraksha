@@ -69,7 +69,7 @@ Port 8000 conflict between them — run separately or change one.
 ### Key source layout
 
 - **Entry**: `index.html` → `src/main.tsx` → `src/App.tsx`
-- **Routing**: React Router (`BrowserRouter` in `src/App.tsx`), NOT TanStack Router. Paths: `/`, `/login`, `/blog`, `/disasters` are public; all others need auth via `ProtectedRoute`.
+- **Routing**: React Router (`BrowserRouter` in `src/App.tsx`), NOT TanStack Router. Paths: `/`, `/login`, `/blog`, `/disasters`, `/risk-map`, `/monitoring`, `/landslides` are public; all others need auth via `ProtectedRoute`.
 - **Sidebar**: 10 nav items in `AppSidebar.tsx`. Items: Dashboard, Flood Detection, Risk Map, River Monitoring, Landslide Prediction, Alerts, Citizen Reports, Data Sources, About, User Management.
 - **Auth**: Custom `AuthProvider` + `ProtectedRoute` in `src/components/auth/`.
 - **Data layer**: All Supabase queries in `src/lib/operationalData.ts`. Falls back to empty arrays when DB is empty.

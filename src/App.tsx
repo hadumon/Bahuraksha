@@ -121,6 +121,42 @@ function AnimatedRoutes() {
             </PageErrorBoundary>
           }
         />
+        <Route
+          path="/risk-map"
+          element={
+            <PageErrorBoundary pageName="Risk Map">
+              <Suspense fallback={<PageSkeleton variant="map" />}>
+                <PageTransition>
+                  <RiskMapPage />
+                </PageTransition>
+              </Suspense>
+            </PageErrorBoundary>
+          }
+        />
+        <Route
+          path="/monitoring"
+          element={
+            <PageErrorBoundary pageName="River Monitoring">
+              <Suspense fallback={<PageSkeleton variant="detail" />}>
+                <PageTransition>
+                  <MonitoringPage />
+                </PageTransition>
+              </Suspense>
+            </PageErrorBoundary>
+          }
+        />
+        <Route
+          path="/landslides"
+          element={
+            <PageErrorBoundary pageName="Landslide Prediction">
+              <Suspense fallback={<PageSkeleton variant="detail" />}>
+                <PageTransition>
+                  <LandslidesPage />
+                </PageTransition>
+              </Suspense>
+            </PageErrorBoundary>
+          }
+        />
 
         {/* Protected Routes */}
         <Route element={<ProtectedRoute />}>
@@ -143,30 +179,6 @@ function AnimatedRoutes() {
                 <Suspense fallback={<PageSkeleton variant="detail" />}>
                   <PageTransition>
                     <FloodDetectionPage />
-                  </PageTransition>
-                </Suspense>
-              </PageErrorBoundary>
-            }
-          />
-          <Route
-            path="/risk-map"
-            element={
-              <PageErrorBoundary pageName="Risk Map">
-                <Suspense fallback={<PageSkeleton variant="map" />}>
-                  <PageTransition>
-                    <RiskMapPage />
-                  </PageTransition>
-                </Suspense>
-              </PageErrorBoundary>
-            }
-          />
-          <Route
-            path="/monitoring"
-            element={
-              <PageErrorBoundary pageName="River Monitoring">
-                <Suspense fallback={<PageSkeleton variant="detail" />}>
-                  <PageTransition>
-                    <MonitoringPage />
                   </PageTransition>
                 </Suspense>
               </PageErrorBoundary>
@@ -215,18 +227,6 @@ function AnimatedRoutes() {
                 <Suspense fallback={<PageSkeleton variant="detail" />}>
                   <PageTransition>
                     <AboutPage />
-                  </PageTransition>
-                </Suspense>
-              </PageErrorBoundary>
-            }
-          />
-          <Route
-            path="/landslides"
-            element={
-              <PageErrorBoundary pageName="Landslide Prediction">
-                <Suspense fallback={<PageSkeleton variant="detail" />}>
-                  <PageTransition>
-                    <LandslidesPage />
                   </PageTransition>
                 </Suspense>
               </PageErrorBoundary>
