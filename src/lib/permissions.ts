@@ -11,6 +11,7 @@ export type Permission =
   | "view:about"
   | "view:landslides"
   | "view:admin"
+  | "view:settings"
   | "manage:alerts"
   | "manage:citizen-reports"
   | "manage:users"
@@ -20,27 +21,27 @@ export const ROLE_PERMISSIONS: Record<UserRole, Permission[]> = {
   admin: [
     "view:dashboard", "view:risk-map", "view:monitoring", "view:flood-detection", "view:alerts",
     "view:citizen-reports", "view:data-sources", "view:about",
-    "view:landslides", "view:admin",
+    "view:landslides", "view:admin", "view:settings",
     "manage:alerts", "manage:citizen-reports", "manage:users",
     "submit:field-reports",
   ],
   ops: [
     "view:dashboard", "view:risk-map", "view:monitoring", "view:flood-detection", "view:alerts",
     "view:citizen-reports", "view:data-sources", "view:about",
-    "view:landslides",
+    "view:landslides", "view:settings",
     "manage:alerts", "manage:citizen-reports",
   ],
   analyst: [
     "view:dashboard", "view:risk-map", "view:monitoring", "view:flood-detection",
-    "view:data-sources", "view:about", "view:landslides",
+    "view:data-sources", "view:about", "view:landslides", "view:settings",
   ],
   field: [
     "view:dashboard", "view:risk-map", "view:monitoring", "view:flood-detection",
-    "view:citizen-reports", "view:about",
+    "view:citizen-reports", "view:about", "view:settings",
     "submit:field-reports",
   ],
   viewer: [
-    "view:dashboard", "view:risk-map", "view:about",
+    "view:dashboard", "view:risk-map", "view:about", "view:settings",
   ],
 };
 
@@ -75,6 +76,7 @@ export function routeToPermission(path: string): Permission | null {
     "/landslides": "view:landslides",
     "/admin": "view:admin",
     "/admin/users": "view:admin",
+    "/settings": "view:settings",
   };
   return map[path] ?? null;
 }

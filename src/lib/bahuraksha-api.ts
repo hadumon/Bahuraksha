@@ -90,6 +90,7 @@ export async function getHealth(): Promise<HealthResponse> {
 }
 
 export interface WhatsAppNotificationRequest {
+  alert_id: string;
   zone: string;
   title: string;
   message: string;
@@ -97,20 +98,26 @@ export interface WhatsAppNotificationRequest {
 }
 
 export interface WhatsAppNotificationResponse {
-  status: "sent" | "simulated";
-  recipients: number;
+  status: "sent" | "simulated" | "failed";
+  recipients?: number;
+  total?: number;
+  sent?: number;
+  failed?: number;
   severity: string;
   zone: string;
+  alert_id?: string;
   note?: string;
+  error?: string;
 }
 
 export async function sendWhatsAppAlert(
-  payload: WhatsAppNotificationRequest,
+  alertId: string,
+  payload: Omit<WhatsAppNotificationRequest, "alert_id">,
 ): Promise<WhatsAppNotificationResponse> {
   try {
     return await apiFetch<WhatsAppNotificationResponse>("/notify/whatsapp", {
       method: "POST",
-      body: JSON.stringify(payload),
+      body: JSON.stringify({ ...payload, alert_id: alertId }),
     });
   } catch {
     console.info("WhatsApp notification simulated (Twilio not configured).", { zone: payload.zone, severity: payload.severity });
@@ -121,5 +128,56 @@ export async function sendWhatsAppAlert(
       zone: payload.zone,
       note: "Twilio not configured — alert logged",
     };
+  }
+}
+
+export interface AlertRecipient {
+  id: string;
+  phone_number: string;
+  delivery_status: "pending" | "sent" | "delivered" | "read" | "failed";
+  retry_count: number;
+  sent_at: string | null;
+  delivered_at: string | null;
+  read_at: string | null;
+  error_message: string | null;
+}
+
+export async function getAlertRecipients(alertId: string): Promise<AlertRecipient[]> {
+  try {
+    return await apiFetch<AlertRecipient[]>(`/notify/recipients/${alertId}`);
+  } catch {
+    return [];
+  }
+}
+
+export async function optInWhatsApp(userId: string, phone: string): Promise<{ status: string }> {
+  try {
+    return await apiFetch<{ status: string }>("/notify/whatsapp/opt-in", {
+      method: "POST",
+      body: JSON.stringify({ user_id: userId, phone }),
+    });
+  } catch {
+    return { status: "error" };
+  }
+}
+
+export async function optOutWhatsApp(userId: string): Promise<{ status: string }> {
+  try {
+    return await apiFetch<{ status: string }>("/notify/whatsapp/opt-out", {
+      method: "POST",
+      body: JSON.stringify({ user_id: userId }),
+    });
+  } catch {
+    return { status: "error" };
+  }
+}
+
+export async function retryFailedDeliveries(): Promise<{ status: string; retried?: number }> {
+  try {
+    return await apiFetch<{ status: string; retried?: number }>("/notify/retry", {
+      method: "POST",
+    });
+  } catch {
+    return { status: "error" };
   }
 }

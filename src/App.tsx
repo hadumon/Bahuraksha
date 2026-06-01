@@ -28,6 +28,7 @@ const DisastersPage = lazy(() => import("./pages/DisastersPage"));
 const LandslidesPage = lazy(() => import("./pages/LandslidesPage"));
 const FloodDetectionPage = lazy(() => import("./pages/FloodDetectionPage"));
 const AdminUsersPage = lazy(() => import("./pages/AdminUsersPage"));
+const SettingsPage = lazy(() => import("./pages/SettingsPage"));
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -235,10 +236,22 @@ function AnimatedRoutes() {
           <Route
             path="/admin/users"
             element={
-              <PageErrorBoundary pageName="User Management">
+              <PageErrorBoundary pageName="Admin Users">
                 <Suspense fallback={<PageSkeleton variant="list" />}>
                   <PageTransition>
                     <AdminUsersPage />
+                  </PageTransition>
+                </Suspense>
+              </PageErrorBoundary>
+            }
+          />
+          <Route
+            path="/settings"
+            element={
+              <PageErrorBoundary pageName="Settings">
+                <Suspense fallback={<PageSkeleton variant="default" />}>
+                  <PageTransition>
+                    <SettingsPage />
                   </PageTransition>
                 </Suspense>
               </PageErrorBoundary>

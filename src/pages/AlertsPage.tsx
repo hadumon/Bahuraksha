@@ -5,8 +5,17 @@ import AlertFeed from "@/components/dashboard/AlertFeed";
 import RiskLevelBadge from "@/components/dashboard/RiskLevelBadge";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { sendWhatsAppAlert } from "@/lib/bahuraksha-api";
-import { Droplets, Mountain, Bell, BellOff, Inbox, CheckCircle2, XCircle } from "lucide-react";
+import {
+  sendWhatsAppAlert,
+  getAlertRecipients,
+  retryFailedDeliveries,
+  type AlertRecipient,
+} from "@/lib/bahuraksha-api";
+import {
+  Droplets, Mountain, Bell, BellOff, Inbox, CheckCircle2, XCircle,
+  ChevronDown, ChevronUp, RefreshCw, Phone, Check, AlertTriangle,
+  MessageCircle,
+} from "lucide-react";
 
 const typeIcons = { flood: Droplets, landslide: Mountain };
 const typeLabels = { flood: "Flood", landslide: "Landslide" };
@@ -30,6 +39,113 @@ type AlertFormState = {
   type: AlertRow["type"];
   severity: AlertRow["severity"];
 };
+
+const deliveryStatusIcons: Record<string, typeof Bell> = {
+  pending: BellOff,
+  sent: MessageCircle,
+  delivered: Check,
+  read: CheckCircle2,
+  failed: AlertTriangle,
+};
+
+const deliveryStatusColors: Record<string, string> = {
+  pending: "text-muted-foreground",
+  sent: "text-blue-500",
+  delivered: "text-green-500",
+  read: "text-green-600",
+  failed: "text-red-500",
+};
+
+function DeliveryStatus({ alertId }: { alertId: string }) {
+  const [recipients, setRecipients] = useState<AlertRecipient[]>([]);
+  const [expanded, setExpanded] = useState(false);
+  const [loading, setLoading] = useState(false);
+
+  const fetchRecipients = async () => {
+    setLoading(true);
+    const data = await getAlertRecipients(alertId);
+    setRecipients(data);
+    setLoading(false);
+  };
+
+  useEffect(() => {
+    fetchRecipients();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [alertId]);
+
+  if (recipients.length === 0 && !loading) return null;
+
+  const counts = recipients.reduce(
+    (acc, r) => {
+      acc[r.delivery_status] = (acc[r.delivery_status] || 0) + 1;
+      return acc;
+    },
+    {} as Record<string, number>,
+  );
+
+  return (
+    <div className="mt-3 pt-3 border-t border-border/50">
+      <button
+        onClick={() => setExpanded(!expanded)}
+        className="flex items-center gap-2 text-xs text-muted-foreground hover:text-foreground transition-colors"
+      >
+        <MessageCircle className="w-3 h-3" />
+        Delivery Status ({recipients.length} recipient{recipients.length !== 1 ? "s" : ""})
+        <span className="flex gap-1.5 ml-1">
+          {Object.entries(counts).map(([status, count]) => (
+            <span
+              key={status}
+              className={`inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded text-[10px] font-medium
+                ${deliveryStatusColors[status]} bg-secondary`}
+            >
+              {count}
+            </span>
+          ))}
+        </span>
+        {expanded ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />}
+      </button>
+
+      {expanded && (
+        <div className="mt-2 space-y-1">
+          {recipients.map((r) => {
+            const StatusIcon = deliveryStatusIcons[r.delivery_status] || BellOff;
+            return (
+              <div
+                key={r.id}
+                className="flex items-center gap-2 text-xs py-1 px-2 rounded bg-secondary/30"
+              >
+                <StatusIcon className={`w-3 h-3 ${deliveryStatusColors[r.delivery_status]}`} />
+                <span className="font-mono text-muted-foreground">{r.phone_number}</span>
+                <span className={`ml-auto font-medium capitalize ${deliveryStatusColors[r.delivery_status]}`}>
+                  {r.delivery_status}
+                </span>
+                {r.retry_count > 0 && (
+                  <span className="text-muted-foreground">(retry {r.retry_count}/3)</span>
+                )}
+                {r.error_message && (
+                  <span className="text-red-500 truncate max-w-[120px]" title={r.error_message}>
+                    {r.error_message}
+                  </span>
+                )}
+                {r.delivered_at && (
+                  <span className="text-muted-foreground">{new Date(r.delivered_at).toLocaleTimeString()}</span>
+                )}
+              </div>
+            );
+          })}
+          <button
+            onClick={fetchRecipients}
+            disabled={loading}
+            className="text-xs text-muted-foreground hover:text-foreground mt-1 flex items-center gap-1"
+          >
+            <RefreshCw className={`w-3 h-3 ${loading ? "animate-spin" : ""}`} />
+            Refresh
+          </button>
+        </div>
+      )}
+    </div>
+  );
+}
 
 export default function AlertsPage() {
   const queryClient = useQueryClient();
@@ -113,7 +229,7 @@ export default function AlertsPage() {
     });
     queryClient.invalidateQueries({ queryKey: ["alerts"] });
 
-    const wa = await sendWhatsAppAlert({
+    const wa = await sendWhatsAppAlert(newAlert.id, {
       zone: newAlert.zone,
       title: newAlert.title,
       message: newAlert.message,
@@ -122,7 +238,11 @@ export default function AlertsPage() {
 
     if (wa.status === "sent") {
       toast.success("WhatsApp alert sent", {
-        description: `${wa.recipients} recipient(s) notified for ${newAlert.zone}`,
+        description: `${wa.sent ?? wa.recipients} recipient(s) notified for ${newAlert.zone}`,
+      });
+    } else if (wa.status === "failed") {
+      toast.error("WhatsApp alert failed", {
+        description: wa.error ?? "All deliveries failed",
       });
     } else {
       toast.info("Alert created", {
@@ -157,6 +277,20 @@ export default function AlertsPage() {
             </p>
           </div>
           <div className="flex items-center gap-3 text-sm text-muted-foreground">
+            <button
+              onClick={async () => {
+                const result = await retryFailedDeliveries();
+                if (result.status === "ok") {
+                  toast.success(`Retried ${result.retried} failed deliveries`);
+                } else {
+                  toast.info("Retry triggered");
+                }
+              }}
+              className="flex items-center gap-1 px-3 py-1 rounded-md bg-secondary hover:bg-border transition-colors text-xs"
+            >
+              <RefreshCw className="w-3 h-3" />
+              Retry Failed
+            </button>
             <span className="flex items-center gap-1">
               <Bell className="w-4 h-4" />
               {activeCount} active
@@ -355,6 +489,9 @@ export default function AlertsPage() {
                         {new Date(alert.created_at ?? "").toLocaleString()}
                       </span>
                     </div>
+
+                    {isApproved && <DeliveryStatus alertId={alert.id} />}
+
                     <div className="flex items-center gap-2 mt-3">
                       {isPending && (
                         <button
@@ -369,7 +506,7 @@ export default function AlertsPage() {
                               } else {
                                 toast.success("Alert approved");
                                 queryClient.invalidateQueries({ queryKey: ["alerts"] });
-                                const wa = await sendWhatsAppAlert({
+                                const wa = await sendWhatsAppAlert(alert.id, {
                                   zone: alert.zone,
                                   title: alert.title,
                                   message: alert.message,

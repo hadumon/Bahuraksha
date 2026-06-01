@@ -25,6 +25,7 @@ npm run ingest:satellite     # Sentinel STAC ingestion (needs SUPABASE_URL + SUP
 npm run ingest:rainfall      # Open-Meteo rainfall forecast ingestion
 npm run ingest:river-levels  # Open-Meteo Flood API river discharge → level ingestion
 npm run ingest:flood-predictions  # bahuraksha.onrender.com → flood_predictions table
+npm run ingest:landslide-predictions  # ml-pipeline model → landslide_predictions table
 start-demo.bat               # Start API (:8000) + frontend (:8080)
 demo-check.bat               # Health check: API, frontend, models, CSVs, predictions
 

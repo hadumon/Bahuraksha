@@ -1,0 +1,151 @@
+{
+  "model_type": "XGBoost + Isotonic Calibration",
+  "n_features": 20,
+  "feature_names": [
+    "slope_angle_deg",
+    "soil_moisture_pct",
+    "rainfall_7d_mm",
+    "rainfall_today_mm",
+    "seismic_activity_mg",
+    "vegetation_cover_pct",
+    "elevation_m",
+    "distance_to_road_km",
+    "distance_to_river_km",
+    "curvature",
+    "aspect_deg",
+    "ndvi",
+    "lithology_code",
+    "land_use_code",
+    "rainfall_soil_coupling",
+    "slope_vegetation_interaction",
+    "seismic_slope_amplification",
+    "topographic_wetness_idx",
+    "road_slope_interaction",
+    "elevation_rainfall_interaction"
+  ],
+  "n_training_samples": 6050,
+  "positive_rate": 0.10991735537190082,
+  "metrics": {
+    "cv_roc_auc_mean": 0.8752843110561921,
+    "cv_roc_auc_std": 0.009444395733815928,
+    "cv_avg_precision_mean": 0.5612382643291663,
+    "cv_f1_mean": 0.532016507817749,
+    "cv_precision_mean": 0.47726040437430833,
+    "cv_recall_mean": 0.6030075187969925,
+    "train_roc_auc": 0.9980895134772865,
+    "train_avg_precision": 0.9829307635756032,
+    "train_f1": 0.8449744463373083
+  },
+  "thresholds": {
+    "evacuate": 0.78,
+    "warning": 0.58,
+    "watch": 0.32
+  },
+  "feature_importance": [
+    {
+      "feature": "road_slope_interaction",
+      "importance": 0.13278968632221222
+    },
+    {
+      "feature": "slope_angle_deg",
+      "importance": 0.08694671094417572
+    },
+    {
+      "feature": "elevation_rainfall_interaction",
+      "importance": 0.0652070939540863
+    },
+    {
+      "feature": "rainfall_soil_coupling",
+      "importance": 0.06499254703521729
+    },
+    {
+      "feature": "soil_moisture_pct",
+      "importance": 0.05924072861671448
+    },
+    {
+      "feature": "slope_vegetation_interaction",
+      "importance": 0.057263683527708054
+    },
+    {
+      "feature": "distance_to_river_km",
+      "importance": 0.05287322774529457
+    },
+    {
+      "feature": "elevation_m",
+      "importance": 0.04732720926403999
+    },
+    {
+      "feature": "lithology_code",
+      "importance": 0.046352818608284
+    },
+    {
+      "feature": "distance_to_road_km",
+      "importance": 0.04284147545695305
+    },
+    {
+      "feature": "topographic_wetness_idx",
+      "importance": 0.040797159075737
+    },
+    {
+      "feature": "rainfall_7d_mm",
+      "importance": 0.03946332633495331
+    },
+    {
+      "feature": "rainfall_today_mm",
+      "importance": 0.03843476623296738
+    },
+    {
+      "feature": "vegetation_cover_pct",
+      "importance": 0.03646733611822128
+    },
+    {
+      "feature": "land_use_code",
+      "importance": 0.03407662734389305
+    },
+    {
+      "feature": "curvature",
+      "importance": 0.033144596964120865
+    },
+    {
+      "feature": "seismic_activity_mg",
+      "importance": 0.03175424411892891
+    },
+    {
+      "feature": "seismic_slope_amplification",
+      "importance": 0.03135068342089653
+    },
+    {
+      "feature": "ndvi",
+      "importance": 0.030437778681516647
+    },
+    {
+      "feature": "aspect_deg",
+      "importance": 0.02823830209672451
+    }
+  ],
+  "config": {
+    "xgboost": {
+      "n_estimators": 200,
+      "max_depth": 6,
+      "learning_rate": 0.05,
+      "subsample": 0.8,
+      "colsample_bytree": 0.8,
+      "min_child_weight": 3,
+      "gamma": 0.1,
+      "reg_alpha": 0.1,
+      "reg_lambda": 1.0,
+      "scale_pos_weight": 10,
+      "random_state": 42,
+      "eval_metric": "auc"
+    },
+    "calibration": {
+      "method": "isotonic",
+      "cv_folds": 5
+    },
+    "thresholds": {
+      "evacuate": 0.78,
+      "warning": 0.58,
+      "watch": 0.32
+    }
+  }
+}

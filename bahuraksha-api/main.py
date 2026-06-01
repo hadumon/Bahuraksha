@@ -26,7 +26,10 @@ from pythonjsonlogger.jsonlogger import JsonFormatter
 from starlette.middleware.base import BaseHTTPMiddleware
 
 import config
-from notifications import send_whatsapp_alert
+from notifications import (
+    broadcast_alert, send_direct_alert, process_status_callback,
+    retry_failed_recipients, get_alert_recipients,
+)
 from satellite import (
     BAHURAKSHA_BBOX, search_stac, extract_s2_features, extract_s1_features,
     compute_change_indices, build_feature_vector, get_dem_features,
@@ -114,6 +117,18 @@ except Exception as e:
     log.error(f"Failed to load model bundles: {e}")
     flood_bundle = None
     landslide_bundle = None
+
+# ─── Supabase client (for alert tracking) ────────────────────────────────────
+SUPABASE_URL = os.getenv("VITE_SUPABASE_URL") or os.getenv("SUPABASE_URL", "")
+SUPABASE_KEY = os.getenv("SUPABASE_SERVICE_KEY", "")
+_supabase = None
+if SUPABASE_URL and SUPABASE_KEY:
+    try:
+        from supabase import create_client
+        _supabase = create_client(SUPABASE_URL, SUPABASE_KEY)
+        log.info("Supabase client initialized in main")
+    except Exception as e:
+        log.warning("Failed to initialize Supabase client: %s", e)
 
 
 @app.get("/")
@@ -499,25 +514,126 @@ def debug_info(request: Request) -> dict[str, Any]:
 
 
 class WhatsAppNotificationRequest(BaseModel):
+    alert_id: str = Field(..., description="UUID of the alert in the alerts table")
     zone: str = Field(..., description="Affected zone name")
     title: str = Field(..., max_length=200, description="Alert title")
     message: str = Field(..., max_length=1000, description="Alert body text")
     severity: str = Field(default="watch", pattern=r"^(safe|watch|warning|evacuate)$")
-    to_number: str | None = Field(default=None, description="Recipient phone number (E.164 format), defaults to DEMO_WHATSAPP_NUMBER")
+    to_number: str | None = Field(default=None, description="Specific recipient phone (E.164), defaults to all opted-in users")
+
+
+class WhatsAppCallbackRequest(BaseModel):
+    MessageSid: str = Field(..., description="Twilio message SID")
+    MessageStatus: str = Field(..., description="Twilio message status")
+    ErrorCode: str | None = Field(default=None, description="Twilio error code")
+    ErrorMessage: str | None = Field(default=None, description="Twilio error message")
+
+
+class OptInRequest(BaseModel):
+    user_id: str = Field(..., description="User UUID")
+    phone: str = Field(..., pattern=r"^\+[1-9]\d{6,14}$", description="Phone number in E.164 format")
+
+
+class OptOutRequest(BaseModel):
+    user_id: str = Field(..., description="User UUID")
 
 
 @app.post("/notify/whatsapp", response_model=dict)
 @limiter.limit("20/minute")
 def notify_whatsapp(request: Request, payload: WhatsAppNotificationRequest) -> dict:
-    """Send a WhatsApp alert via Twilio (or simulated fallback)."""
-    result = send_whatsapp_alert(
-        title=payload.title,
-        message=payload.message,
-        zone=payload.zone,
-        severity=payload.severity,
-        to_number=payload.to_number,
-    )
+    """Send a WhatsApp alert via Twilio (or simulated fallback).
+
+    When to_number is provided, sends directly to that number.
+    Otherwise broadcasts to all opted-in users with delivery tracking.
+    """
+    if payload.to_number:
+        result = send_direct_alert(
+            alert_id=payload.alert_id,
+            title=payload.title,
+            message=payload.message,
+            zone=payload.zone,
+            severity=payload.severity,
+            to_number=payload.to_number,
+        )
+    else:
+        result = broadcast_alert(
+            alert_id=payload.alert_id,
+            title=payload.title,
+            message=payload.message,
+            zone=payload.zone,
+            severity=payload.severity,
+        )
     result["severity"] = payload.severity
     result["zone"] = payload.zone
     log.info("WhatsApp notification: %s", result)
+    return result
+
+
+@app.post("/notify/whatsapp/callback", response_model=dict)
+@limiter.limit("60/minute")
+def notify_whatsapp_callback(request: Request, payload: WhatsAppCallbackRequest) -> dict:
+    """Twilio status callback webhook for delivery tracking.
+
+    Called by Twilio when message status changes (sent, delivered, read, failed).
+    Updates alert_recipients table with delivery status.
+    """
+    success = process_status_callback(
+        twilio_message_sid=payload.MessageSid,
+        message_status=payload.MessageStatus,
+        error_code=payload.ErrorCode,
+        error_message=payload.ErrorMessage,
+    )
+    if success:
+        return {"status": "ok"}
+    return {"status": "not_found"}, 404
+
+
+@app.post("/notify/whatsapp/opt-in", response_model=dict)
+@limiter.limit("10/minute")
+def notify_opt_in(request: Request, payload: OptInRequest) -> dict:
+    """Opt a user into WhatsApp alerts."""
+    if not _supabase:
+        return {"status": "error", "detail": "Supabase not configured"}
+    try:
+        _supabase.table("profiles").update({
+            "phone": payload.phone,
+            "whatsapp_opt_in": True,
+        }).eq("id", payload.user_id).execute()
+        log.info("User %s opted into WhatsApp alerts with phone %s", payload.user_id, payload.phone)
+        return {"status": "ok", "user_id": payload.user_id, "phone": payload.phone}
+    except Exception as e:
+        log.warning("Failed to opt in user %s: %s", payload.user_id, e)
+        return {"status": "error", "detail": str(e)}
+
+
+@app.post("/notify/whatsapp/opt-out", response_model=dict)
+@limiter.limit("10/minute")
+def notify_opt_out(request: Request, payload: OptOutRequest) -> dict:
+    """Opt a user out of WhatsApp alerts."""
+    if not _supabase:
+        return {"status": "error", "detail": "Supabase not configured"}
+    try:
+        _supabase.table("profiles").update({
+            "whatsapp_opt_in": False,
+        }).eq("id", payload.user_id).execute()
+        log.info("User %s opted out of WhatsApp alerts", payload.user_id)
+        return {"status": "ok", "user_id": payload.user_id}
+    except Exception as e:
+        log.warning("Failed to opt out user %s: %s", payload.user_id, e)
+        return {"status": "error", "detail": str(e)}
+
+
+@app.get("/notify/recipients/{alert_id}", response_model=list[dict])
+@limiter.limit("30/minute")
+def get_recipients(request: Request, alert_id: str) -> list[dict]:
+    """Get delivery status for all recipients of a given alert."""
+    return get_alert_recipients(alert_id)
+
+
+@app.post("/notify/retry", response_model=dict)
+@limiter.limit("5/minute")
+def retry_failed(request: Request) -> dict:
+    """Retry all failed/pending alert deliveries that haven't exceeded max retries."""
+    result = retry_failed_recipients()
+    log.info("Retry triggered: %s", result)
     return result

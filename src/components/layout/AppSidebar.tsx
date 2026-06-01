@@ -2,18 +2,10 @@ import { Link, useLocation, useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import { useQuery } from "@tanstack/react-query";
 import {
-  LayoutDashboard,
-  Map,
-  Activity,
-  Droplets,
-  AlertTriangle,
-  Users,
-  Database,
-  Info,
-  Shield,
   X,
   Mountain,
   UserCog,
+  Settings,
 } from "lucide-react";
 import { useAuth } from "@/components/auth/useAuth";
 import { cn } from "@/lib/utils";
@@ -39,6 +31,7 @@ const ALL_NAV_ITEMS: NavItemDef[] = [
   { path: "/data-sources", icon: Database, label: "Data Sources", permission: "view:data-sources" },
   { path: "/about", icon: Info, label: "About", permission: "view:about" },
   { path: "/admin/users", icon: UserCog, label: "User Management", permission: "view:admin" },
+  { path: "/settings", icon: Settings, label: "Settings", permission: "view:settings" },
 ];
 
 interface Props {
