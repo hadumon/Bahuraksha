@@ -28,6 +28,7 @@ import ModelStatusPanel from "@/components/dashboard/ModelStatusPanel";
 import RiskExplanationPanel from "@/components/dashboard/RiskExplanationPanel";
 import { computeCompositeRiskZones, normalizeRainfallForecasts } from "@/lib/riskEngine";
 import { getLatest, getHistory } from "@/lib/bahuraksha-api";
+import { fetchSyntheticRoutingResults } from "@/lib/hecrasModel";
 import type { LandslideZoneInput } from "@/lib/landslideModel";
 import { predictBatchLandslideRisk, checkApiHealth } from "@/lib/landslideModel";
 import type { LiveRiskZone } from "@/lib/operationalData";
@@ -142,11 +143,18 @@ export default function Index() {
     queryKey: ["rainfall-forecasts", "Bagmati Basin"],
     queryFn: () => fetchRainfallForecasts("Bagmati Basin"),
   });
+  const { data: hecRasResults } = useQuery({
+    queryKey: ["hec-ras-routing"],
+    queryFn: fetchSyntheticRoutingResults,
+    staleTime: 1000 * 60 * 15,
+    retry: 1,
+  });
   const computedZones = computeCompositeRiskZones({
     zones,
     stations,
     rainfall: normalizeRainfallForecasts(rainfallRows),
     xgboostPrediction: prediction,
+    hecRasResults,
   });
 
   const landslideZoneInputs = useMemo(() => zonesToLandslideInput(zones), [zones]);

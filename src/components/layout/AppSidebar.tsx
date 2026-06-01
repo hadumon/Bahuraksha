@@ -2,10 +2,18 @@ import { Link, useLocation, useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import { useQuery } from "@tanstack/react-query";
 import {
-  X,
+  Activity,
+  AlertTriangle,
+  Database,
+  Droplets,
+  Info,
+  LayoutDashboard,
+  Map,
   Mountain,
-  UserCog,
   Settings,
+  UserCog,
+  Users,
+  X,
 } from "lucide-react";
 import { useAuth } from "@/components/auth/useAuth";
 import { cn } from "@/lib/utils";

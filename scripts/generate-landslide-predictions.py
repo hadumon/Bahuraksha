@@ -133,8 +133,14 @@ def build_ml_features(zone: dict) -> dict:
     ndvi = 0.15 + 0.6 * max(0, 1 - abs(lat - 28.5) / 3)
     ndvi = min(0.85, ndvi)
 
-    soil_moisture = min(90, 20 + min(100, rainfall_7d) * 0.3)
+    # SIMULATED STORM OVERRIDE (For testing UI)
+    rainfall_7d = 350.0 + np.random.default_rng(seed=abs(hash(name))).normal(0, 50)
+    rainfall_today = 150.0 + np.random.default_rng(seed=abs(hash(name))+1).normal(0, 20)
+    seismic = 4.5
+    soil_moisture = 95.0
     vegetation = min(85, 20 + ndvi * 60)
+    dist_road = 0.5 + abs(lon - 85.0) * 5
+    dist_river = 0.3 + abs(lat - 27.5) * 3
 
     dist_road = 0.5 + abs(lon - 85.0) * 5
     dist_river = 0.3 + abs(lat - 27.5) * 3

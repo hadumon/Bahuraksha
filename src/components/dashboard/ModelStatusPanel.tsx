@@ -20,7 +20,7 @@ export default function ModelStatusPanel() {
 
   const hasLatestData = !!latest.data;
   const isHealthy = hasLatestData || (health.data?.model_loaded === true && !health.error);
-  const riskScore = latest.data?.prediction.risk_score;
+  const riskScore = latest.data?.prediction?.risk_score;
 
   return (
     <div className="rounded-2xl border border-border/50 bg-gradient-to-br from-card to-secondary/20 p-5 shadow-card">

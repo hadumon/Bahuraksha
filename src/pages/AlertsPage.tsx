@@ -254,18 +254,7 @@ export default function AlertsPage() {
   return (
     <AppLayout>
       <div className="p-4 md:p-6 space-y-6">
-        <div className="rounded-lg border border-amber-500/30 bg-amber-50 dark:bg-amber-950/20 px-4 py-3 flex items-start gap-3">
-          <BellOff className="w-5 h-5 text-amber-600 shrink-0 mt-0.5" />
-          <div className="text-sm">
-            <p className="font-medium text-amber-800 dark:text-amber-300">WhatsApp notifications not configured</p>
-            <p className="text-amber-700 dark:text-amber-400 mt-0.5">
-              Add <code className="text-xs bg-amber-100 dark:bg-amber-900/50 px-1 rounded">TWILIO_ACCOUNT_SID</code> and{" "}
-              <code className="text-xs bg-amber-100 dark:bg-amber-900/50 px-1 rounded">TWILIO_AUTH_TOKEN</code> to{" "}
-              <code className="text-xs bg-amber-100 dark:bg-amber-900/50 px-1 rounded">.env</code> to send real WhatsApp alerts.
-              Currently all alerts are <strong>simulated</strong>.
-            </p>
-          </div>
-        </div>
+
 
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
           <div>

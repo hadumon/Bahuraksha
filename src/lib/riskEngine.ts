@@ -121,11 +121,11 @@ export function computeCompositeRiskZones(params: {
     const landslideRainCoupling = clamp01(zone.landslideProb * rainfallSummary.riskScore);
 
     const compositeScore = clamp01(
-      zone.floodProb * 0.26 +
-        rainfallSummary.riskScore * 0.24 +
-        stationRisk * 0.2 +
-        xgboostRisk * 0.14 +
-        hecRasRisk * 0.11 +
+      xgboostRisk * 0.40 +
+        zone.floodProb * 0.15 +
+        rainfallSummary.riskScore * 0.15 +
+        stationRisk * 0.15 +
+        hecRasRisk * 0.10 +
         landslideRainCoupling * 0.05,
     );
 
@@ -196,7 +196,7 @@ function buildRiskExplanation(input: {
     `${input.zoneName} is classified ${input.computedRiskLevel} with composite score ${(input.compositeScore * 100).toFixed(0)}%.`,
     `Rainfall peak is ${input.rainfallSummary.maxDailyMm.toFixed(1)}mm on ${input.rainfallSummary.peakDay} (${input.rainfallSummary.intensity}).`,
     stationText,
-    `XGBoost satellite contribution is ${(input.xgboostRisk * 100).toFixed(0)}%; HEC-RAS contribution is ${(input.hecRasRisk * 100).toFixed(0)}%.`,
+    `Live model (XGBoost) contribution is ${(input.xgboostRisk * 100).toFixed(0)}%; HEC-RAS contribution is ${(input.hecRasRisk * 100).toFixed(0)}%.`,
   ];
 }
 function findNearestStation(zone: LiveRiskZone, stations: LiveRiverStation[]) {

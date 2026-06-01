@@ -66,6 +66,7 @@ Port 8000 conflict between them — run separately or change one.
 
 - **Flood/satellite**: `src/lib/bahuraksha-api.ts` → `https://bahuraksha.onrender.com` (falls back to mock on failure)
 - **Landslide ML**: `src/lib/landslideModel.ts` → `VITE_LANDSLIDE_API_URL` (default `http://localhost:8000`, falls back to `computeHeuristicPrediction()` on failure)
+- **HEC-RAS**: `src/lib/hecrasModel.ts` → `fetchSyntheticRoutingResults()` uses rational method Q = C·I·A/3.6 + Manning's equation for depth/velocity at 5 cross sections. No API call — runs entirely client-side.
 
 ### Key source layout
 
@@ -76,7 +77,8 @@ Port 8000 conflict between them — run separately or change one.
 - **Data layer**: All Supabase queries in `src/lib/operationalData.ts`. Falls back to empty arrays when DB is empty.
 - **State**: TanStack Query (5min stale time, retry: 2, no refetch on window focus).
 - **UI**: shadcn/ui (new-york style), `src/components/ui/`, toast via `sonner`.
-- **Maps**: React Leaflet (`RiskMap.tsx` flood, `LandslideMap.tsx` landslide ML).
+- **Maps**: React Leaflet (`RiskMap.tsx` flood, `LandslideMap.tsx` landslide ML). `RiskMap.tsx` uses `zonePolygons.ts` for GeoJSON zone boundaries.
+- **HEC-RAS**: `hecrasModel.ts` has 5 cross sections (Sundarijal, Gokarna, Pashupati, Teku, Chovar) with Manning's n and a synthetic routing function. Activated in `HecRasModelPanel.tsx`, `RiskMap.tsx`, `Index.tsx`, `RiskMapPage.tsx`, `ZoneRiskTable.tsx` — all pass `hecRasResults` to `computeCompositeRiskZones()` which applies 10% weight.
 - **Pages**: Lazy-loaded with framer-motion `PageTransition` wrapper.
 - **Skeletons**: `PageSkeleton` with 5 layout variants (dashboard, map, list, detail, default).
 - **Error boundaries**: `PageErrorBoundary` wraps every route in `App.tsx`.

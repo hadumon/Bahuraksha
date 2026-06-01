@@ -2,6 +2,7 @@ import { useQuery } from "@tanstack/react-query";
 import RiskLevelBadge from "./RiskLevelBadge";
 import { fetchRainfallForecasts, fetchRiskZones, fetchRiverStations } from "@/lib/operationalData";
 import { getLatest } from "@/lib/bahuraksha-api";
+import { fetchSyntheticRoutingResults } from "@/lib/hecrasModel";
 import { computeCompositeRiskZones, normalizeRainfallForecasts } from "@/lib/riskEngine";
 import { MapPin, Users, TrendingDown, TrendingUp, Activity } from "lucide-react";
 import { motion } from "framer-motion";
@@ -26,12 +27,19 @@ export default function ZoneRiskTable() {
     retry: 1,
     staleTime: 1000 * 60 * 10,
   });
+  const { data: hecRasResults } = useQuery({
+    queryKey: ["hec-ras-routing"],
+    queryFn: fetchSyntheticRoutingResults,
+    staleTime: 1000 * 60 * 15,
+    retry: 1,
+  });
 
   const computedZones = computeCompositeRiskZones({
     zones,
     stations,
     rainfall: normalizeRainfallForecasts(rainfallRows),
     xgboostPrediction,
+    hecRasResults,
   });
 
   const sorted = [...computedZones].sort((a, b) => {

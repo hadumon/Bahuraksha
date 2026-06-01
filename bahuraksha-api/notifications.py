@@ -171,7 +171,8 @@ def broadcast_alert(alert_id: str, title: str, message: str, zone: str, severity
     simulated = not _has_twilio
     results = []
 
-    callback_base = f"{BASE_URL}/notify/whatsapp/callback" if _has_twilio else None
+    _public_base = "localhost" not in BASE_URL and "127.0.0.1" not in BASE_URL
+    callback_base = f"{BASE_URL}/notify/whatsapp/callback" if (_has_twilio and _public_base) else None
 
     for recipient in recipients:
         phone = recipient["phone"]
@@ -249,7 +250,7 @@ def send_direct_alert(
             "note": "Twilio not configured — alert logged",
         }
 
-    callback_url = f"{BASE_URL}/notify/whatsapp/callback"
+    callback_url = f"{BASE_URL}/notify/whatsapp/callback" if "localhost" not in BASE_URL else None
     success, msg_sid, error = _send_via_twilio(to_number, title, message, zone, severity, callback_url)
     recipient_record = _create_recipient_record(
         alert_id, None, to_number,
@@ -355,7 +356,7 @@ def retry_failed_recipients() -> dict[str, Any]:
 
     retried = 0
     results = []
-    callback_base = f"{BASE_URL}/notify/whatsapp/callback" if _has_twilio else None
+    callback_base = f"{BASE_URL}/notify/whatsapp/callback" if (_has_twilio and "localhost" not in BASE_URL) else None
 
     for rec in recipients:
         if not _has_twilio:
