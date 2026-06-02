@@ -129,7 +129,7 @@ export default function RiskMap({ className = "" }: { className?: string }) {
         const fillOpacity = riskFillOpacity[riskLevel];
 
         // Find matching polygon by zone name
-        const polygon = ZONE_POLYGONS.find(
+        const polygon = ZONE_POLYGONS.features.find(
           (p) => p.properties.zoneName === zone.name,
         );
 
@@ -190,7 +190,7 @@ export default function RiskMap({ className = "" }: { className?: string }) {
       computedZones
         .filter((z) => z.computedRiskLevel === "evacuate")
         .forEach((zone) => {
-          const polygon = ZONE_POLYGONS.find(
+          const polygon = ZONE_POLYGONS.features.find(
             (p) => p.properties.zoneName === zone.name,
           );
           if (polygon) {
