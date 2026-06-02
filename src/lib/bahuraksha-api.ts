@@ -97,6 +97,28 @@ export interface WhatsAppNotificationRequest {
   severity: "safe" | "watch" | "warning" | "evacuate";
 }
 
+export interface CitizenReportNotificationRequest {
+  type: string;
+  description: string;
+  location_name: string;
+  location_lat: number;
+  location_lng: number;
+}
+
+export async function notifyCitizenReportSubmission(
+  payload: CitizenReportNotificationRequest,
+): Promise<{ status: string; notified?: number }> {
+  try {
+    return await apiFetch<{ status: string; notified?: number }>("/notify/citizen-report", {
+      method: "POST",
+      body: JSON.stringify(payload),
+    });
+  } catch {
+    console.info("Citizen report notification skipped (API unavailable).");
+    return { status: "skipped" };
+  }
+}
+
 export interface WhatsAppNotificationResponse {
   status: "sent" | "simulated" | "failed";
   recipients?: number;

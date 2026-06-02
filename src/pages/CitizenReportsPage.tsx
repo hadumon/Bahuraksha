@@ -8,6 +8,9 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { toast } from 'sonner';
 import { predictLandslideRisk } from '@/lib/landslideModel';
+import { useAuth } from '@/components/auth/useAuth';
+import { hasPermission } from '@/lib/permissions';
+import { notifyCitizenReportSubmission } from '@/lib/bahuraksha-api';
 
 const typeLabels = {
   rising_water: 'Rising Water',
@@ -43,6 +46,8 @@ type Report = {
 
 export default function CitizenReportsPage() {
   const queryClient = useQueryClient();
+  const { user, userRole } = useAuth();
+  const canSubmit = hasPermission(userRole, "submit:field-reports");
   const [showForm, setShowForm] = useState(false);
   const [formData, setFormData] = useState<{
     type: CitizenReportType;
@@ -134,10 +139,19 @@ export default function CitizenReportsPage() {
       toast.error('Failed to submit report');
       return;
     }
-    toast.success('Report submitted! ML verification in progress.');
+
+    toast.success('Report submitted — admins notified.');
     setShowForm(false);
     setFormData({ type: 'rising_water', description: '', location: '' });
     queryClient.invalidateQueries({ queryKey: ['citizen-reports'] });
+
+    notifyCitizenReportSubmission({
+      type: formData.type,
+      description: formData.description,
+      location_name: formData.location,
+      location_lat: lat,
+      location_lng: lng,
+    });
   };
 
   const reportStats = {
@@ -157,9 +171,13 @@ export default function CitizenReportsPage() {
               Community-sourced field observations with ML verification
             </p>
           </div>
-          <Button onClick={() => setShowForm(!showForm)} className="gradient-primary text-primary-foreground">
-            <Plus className="w-4 h-4 mr-2" /> Submit Report
-          </Button>
+          {canSubmit ? (
+            <Button onClick={() => setShowForm(!showForm)} className="gradient-primary text-primary-foreground">
+              <Plus className="w-4 h-4 mr-2" /> Submit Report
+            </Button>
+          ) : (
+            <p className="text-xs text-muted-foreground italic">Submit permission required to report</p>
+          )}
         </div>
 
         {/* Stats */}

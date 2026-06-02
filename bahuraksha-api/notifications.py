@@ -399,6 +399,61 @@ def retry_failed_recipients() -> dict[str, Any]:
     return {"status": "ok", "retried": retried, "total": len(recipients), "results": results}
 
 
+def notify_admins_of_report(
+    report_type: str,
+    description: str,
+    location_name: str,
+    location_lat: float,
+    location_lng: float,
+) -> dict[str, Any]:
+    """Notify all admin users about a new citizen report via WhatsApp."""
+    if not _supabase:
+        log.info("[SIMULATED] Citizen report admin notification: %s - %s at %s",
+                 report_type, description[:60], location_name)
+        return {"status": "simulated", "notified": 0}
+
+    try:
+        resp = _supabase.table("profiles") \
+            .select("id, phone, full_name") \
+            .eq("role", "admin") \
+            .not_.is_("phone", "null") \
+            .execute()
+        admins = resp.data if resp.data else []
+    except Exception as e:
+        log.warning("Failed to fetch admin profiles: %s", e)
+        admins = []
+
+    if not admins:
+        log.info("No admin phone numbers found — citizen report notification skipped")
+        return {"status": "skipped", "notified": 0}
+
+    title = f"New Citizen Report: {report_type.replace('_', ' ').title()}"
+    message = (
+        f"Type: {report_type}\n"
+        f"Location: {location_name} ({location_lat:.4f}, {location_lng:.4f})\n"
+        f"Description: {description}"
+    )
+
+    _public_base = "localhost" not in BASE_URL and "127.0.0.1" not in BASE_URL
+    callback_base = f"{BASE_URL}/notify/whatsapp/callback" if (_has_twilio and _public_base) else None
+    notified = 0
+
+    for admin in admins:
+        phone = admin["phone"]
+        success, msg_sid, error = _send_via_twilio(phone, title, message, "N/A", "watch", callback_base)
+        if success:
+            notified += 1
+            log.info("Admin %s notified about citizen report (SID: %s)", admin.get("id"), msg_sid)
+        else:
+            log.warning("Failed to notify admin %s: %s", admin.get("id"), error)
+
+    return {
+        "status": "sent" if notified else "failed",
+        "notified": notified,
+        "total_admins": len(admins),
+    }
+
+
 def get_alert_recipients(alert_id: str) -> list[dict[str, Any]]:
     """Get delivery status for all recipients of an alert."""
     if not _supabase:

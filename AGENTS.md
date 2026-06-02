@@ -75,6 +75,7 @@ Port 8000 conflict between them — run separately or change one.
 - **Sidebar**: 10 nav items in `AppSidebar.tsx`. Items: Dashboard, Flood Detection, Risk Map, River Monitoring, Landslide Prediction, Alerts, Citizen Reports, Data Sources, About, User Management.
 - **Auth**: Custom `AuthProvider` + `ProtectedRoute` in `src/components/auth/`.
 - **Data layer**: All Supabase queries in `src/lib/operationalData.ts`. Falls back to empty arrays when DB is empty.
+- **Citizen reports**: `CitizenReportsPage.tsx` → direct Supabase INSERT. After submission, calls `notifyCitizenReportSubmission()` → `POST /notify/citizen-report` → `notify_admins_of_report()` queries `profiles` where role=admin and sends WhatsApp. Submit button only visible to roles with `submit:field-reports` permission.
 - **State**: TanStack Query (5min stale time, retry: 2, no refetch on window focus).
 - **UI**: shadcn/ui (new-york style), `src/components/ui/`, toast via `sonner`.
 - **Maps**: React Leaflet (`RiskMap.tsx` flood, `LandslideMap.tsx` landslide ML). `RiskMap.tsx` uses `zonePolygons.ts` for GeoJSON zone boundaries.
@@ -98,6 +99,7 @@ All rate-limited via `slowapi` (env `BAHURAKSHA_RATE_LIMIT`, default `30/min`). 
 | GET | `/risk/zones` | 30/min | Composite risk from query params |
 | GET | `/risk/zones/live` | 20/min | Live zone risk from CSV (cached) |
 | POST | `/ingest/satellite` | 5/min | Append satellite log row |
+| POST | `/notify/citizen-report` | 20/min | Notify admins about new citizen report via WhatsApp |
 | POST | `/debug/features` | 10/min | STAC debug feature vector |
 | GET | `/debug` | 10/min | Server debug |
 | GET | `/debug/info` | 10/min | Data freshness, cache, file sizes |

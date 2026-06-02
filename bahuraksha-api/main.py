@@ -28,7 +28,7 @@ from starlette.middleware.base import BaseHTTPMiddleware
 import config
 from notifications import (
     broadcast_alert, send_direct_alert, process_status_callback,
-    retry_failed_recipients, get_alert_recipients,
+    retry_failed_recipients, get_alert_recipients, notify_admins_of_report,
 )
 from satellite import (
     BAHURAKSHA_BBOX, search_stac, extract_s2_features, extract_s1_features,
@@ -536,6 +536,29 @@ class OptInRequest(BaseModel):
 
 class OptOutRequest(BaseModel):
     user_id: str = Field(..., description="User UUID")
+
+
+class CitizenReportNotificationRequest(BaseModel):
+    type: str = Field(..., description="Report type (rising_water, cracks, blocked_drain, landslide_signs, other)")
+    description: str = Field(..., max_length=1000, description="Report description")
+    location_name: str = Field(..., max_length=200, description="Location name")
+    location_lat: float = Field(..., description="Latitude")
+    location_lng: float = Field(..., description="Longitude")
+
+
+@app.post("/notify/citizen-report", response_model=dict)
+@limiter.limit("20/minute")
+def notify_citizen_report(request: Request, payload: CitizenReportNotificationRequest) -> dict:
+    """Notify all admin users about a new citizen report via WhatsApp."""
+    result = notify_admins_of_report(
+        report_type=payload.type,
+        description=payload.description,
+        location_name=payload.location_name,
+        location_lat=payload.location_lat,
+        location_lng=payload.location_lng,
+    )
+    log.info("Citizen report notification: %s", result)
+    return result
 
 
 @app.post("/notify/whatsapp", response_model=dict)
